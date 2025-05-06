@@ -177,7 +177,7 @@ function ForgotPassword() {
                 <Button
                   onClick={(e) => {
                     e.preventDefault();
-                    setStep(1);
+                    // setStep(1);
                   }}
                   type="submit"
                   className="w-full flex gap-2 mt-12 py-5 rounded-[999px] font-medium text-sm bg-demo-gradient text-white shadow-demoShadow"

@@ -51,6 +51,7 @@ export default {
           "5": "hsl(var(--chart-5))",
         },
         bgWhiteGray: "#F5F5F5",
+        bgGreen: "#34C759",
         borderGray: "#D9D9D9",
         primaryBlue: "#286CFF",
         textSubtitle: "#808080",
@@ -69,6 +70,7 @@ export default {
       fontFamily: {
         gorditas: ["var(--gorditas)"],
         geist: ["var(--font-geist-sans)"],
+        inter: ["var(--font-inter)"]
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -88,6 +90,9 @@ export default {
         "demo-gradient":
           "linear-gradient(180deg, #1375FB 75%, #245DFF 100%)",
       },
+      screens: {
+        "2xl": "1600px"
+      }
     },
   },
   // eslint-disable-next-line @typescript-eslint/no-require-imports

@@ -20,6 +20,9 @@ function SigninForm({
   const toggleVisibility = () => setPasswordVisible((v) => !v);
   return (
     <div className="w-full flex flex-col items-center">
+      <Link href="/" className="absolute top-[5%] left-[5%]">
+        <Image src="/logo.svg" alt="" width={0} height={0} className="w-fit" />
+      </Link>
       <h2 className="font-semibold text-primaryBlue text-xl md:text-2xl lg:text-4xl my-3 text-center uppercase">
         <span className="text-black">Welcome to</span> leap learners
       </h2>

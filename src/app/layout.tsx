@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Gorditas } from "next/font/google";
+import { Geist, Geist_Mono, Gorditas, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -17,6 +17,12 @@ const gorditas = Gorditas({
   variable: "--gorditas",
   subsets: ["latin"],
   weight: ["400", "700"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 const generalSans = localFont({
@@ -51,7 +57,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${gorditas.variable} ${generalSans.className}`}
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${gorditas.variable} ${generalSans.className}`}
       >
         {children}
       </body>
