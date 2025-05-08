@@ -5,7 +5,8 @@ import algebra from "@/assets/algebra.png";
 import ans from "@/assets/ans.png";
 import ratio from "@/assets/ratio.png";
 import measurement from "@/assets/measurement.png";
-import { Course, Quiz } from "./types";
+import { Course, Quiz, VideoTopic } from "./types";
+import { StaticImageData } from "next/image";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -237,6 +238,59 @@ export const dummyQuizzes: Quiz[] = [
       { label: "Attempt 1", date: "20-10-2025", score: 62 },
       { label: "Attempt 2", date: "20-10-2025", score: 78 },
       { label: "Attempt 3", date: "20-10-2025", score: 85 },
+    ],
+  },
+];
+
+export const dummyVideoTopics: VideoTopic[] = [
+  {
+    title: "Addition & Subtraction",
+    image: algebra,
+    description: "Learn the basics of addition and subtraction.",
+    subtopics: [
+      { name: "Simple Addition", completed: false },
+      { name: "Simple Subtraction", completed: false },
+      { name: "Word Problems", completed: false },
+    ],
+  },
+  {
+    title: "Multiplication & Division",
+    image: measurement,
+    description: "Master multiplication and division techniques.",
+    subtopics: [
+      { name: "Times Tables", completed: false },
+      { name: "Long Division", completed: false },
+      { name: "Word Problems", completed: false },
+    ],
+  },
+  {
+    title: "Fractions",
+    image: ratio,
+    description: "Understand fractions and their applications.",
+    subtopics: [
+      { name: "Simplifying Fractions", completed: false },
+      { name: "Adding Fractions", completed: false },
+      { name: "Mixed Numbers", completed: false },
+    ],
+  },
+  {
+    title: "Decimals",
+    image: ans,
+    description: "Work with decimals in various contexts.",
+    subtopics: [
+      { name: "Decimal Addition", completed: false },
+      { name: "Decimal Multiplication", completed: false },
+      { name: "Rounding Decimals", completed: false },
+    ],
+  },
+  {
+    title: "Geometry",
+    image: algebra,
+    description: "Explore shapes, angles, and measurements.",
+    subtopics: [
+      { name: "Triangles", completed: false },
+      { name: "Circles", completed: false },
+      { name: "Perimeter & Area", completed: false },
     ],
   },
 ];

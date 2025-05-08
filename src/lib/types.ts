@@ -18,6 +18,13 @@ export interface Quiz {
   attempts: {
     label: string;
     date: string;
-    score: number
-  }[]
+    score: number;
+  }[];
+}
+
+export interface VideoTopic {
+  title: string;
+  image: StaticImageData;
+  description: string;
+  subtopics: { name: string; completed: boolean }[];
 }

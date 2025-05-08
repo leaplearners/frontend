@@ -84,7 +84,13 @@ export default function CourseList() {
                   pathname === href ? "bg-[#EEEEEE]" : "bg-white"
                 }`}
               >
-                <span className="text-textSubtitle font-medium text-sm md:text-base max-w-[300px] whitespace-nowrap truncate inline-block">
+                <span
+                  className={`${
+                    pathname === href
+                      ? "text-primaryBlue font-semibold"
+                      : "text-textSubtitle"
+                  } font-medium text-sm md:text-base max-w-[300px] whitespace-nowrap truncate inline-block`}
+                >
                   {topic.title}
                 </span>
                 <p className="text-textSubtitle text-sm font-inter mt-2">
@@ -112,11 +118,6 @@ export default function CourseList() {
               </Link>
             )}
 
-            {/* Current Topic Title */}
-            {currentTopic && (
-              <h1 className="text-2xl font-bold">{currentTopic.title}</h1>
-            )}
-
             {/* Tutorial Video Section */}
             <div className="bg-primaryBlue rounded-2xl flex items-center gap-4 justify-between py-4 px-6">
               <h2 className="font-medium md:text-xl text-white">
@@ -138,7 +139,12 @@ export default function CourseList() {
               >
                 <div className="flex items-center justify-between px-6 py-4">
                   <h3 className="font-medium">{quiz.title}</h3>
-                  <Button className="rounded-full bg-primaryBlue text-white text-xs py-2 px-4">
+                  <Button
+                    onClick={() =>
+                      router.push(`${pathname}/${slugify(quiz.title)}`)
+                    }
+                    className="rounded-full bg-primaryBlue text-white text-xs py-2 px-4"
+                  >
                     Attempt Quiz
                   </Button>
                 </div>

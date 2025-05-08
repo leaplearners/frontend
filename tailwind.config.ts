@@ -83,12 +83,12 @@ export default {
       boxShadow: {
         custom:
           "`0px 61px 500px 0px rgba(20, 25, 32, 0.01),0px 6.514px 33.251px 0px rgba(20, 25, 32, 0.03), 0px 2.787px 13.836px 0px rgba(20, 25, 32, 0.07)`",
-        demoShadow: 'inset 0 4px 1px 0 #FFFFFF66',
+        demoShadow: "inset 0px 4px 0px 0px #FFFFFF47",
       },
       backgroundImage: {
-        "custom-gradient": "linear-gradient(45deg, #F95A04 0%, #FD841B 100%);",
+        "custom-gradient": "linear-gradient(45deg, #F95A04 35%, #FD841B 40%);",
         "demo-gradient":
-          "linear-gradient(180deg, #1375FB 75%, #245DFF 100%)",
+          "linear-gradient(5deg, #5FBCFF 5%, #286CFF 55%)",
       },
       screens: {
         "2xl": "1600px"

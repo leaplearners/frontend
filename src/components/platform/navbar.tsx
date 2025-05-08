@@ -8,10 +8,10 @@ import { Menu, X } from "lucide-react";
 
 const routes = [
   { name: "Dashboard", path: "/dashboard" },
-  { name: "Library", path: "/dashboard/library" },
-  { name: "Videos & Quiz", path: "/dashboard/videos-quiz" },
-  { name: "Glossary", path: "/dashboard/glossary" },
-  { name: "Settings", path: "/dashboard/settings" },
+  { name: "Library", path: "/library" },
+  { name: "Videos & Quiz", path: "/videos-quiz" },
+  { name: "Glossary", path: "/glossary" },
+  { name: "Settings", path: "/settings" },
 ];
 
 export default function Navbar() {
