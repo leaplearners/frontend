@@ -26,5 +26,5 @@ export interface VideoTopic {
   title: string;
   image: StaticImageData;
   description: string;
-  subtopics: { name: string; completed: boolean }[];
+  subtopics: { name: string; status: string }[];
 }
