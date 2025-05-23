@@ -4,6 +4,7 @@ import { PlusCircle, X } from "lucide-react";
 import React from "react";
 import { ChildProfile } from "../sign-up/profileSetup";
 import { Profile } from "./p";
+import BackArrow from "@/assets/svgs/arrowback";
 
 function CreateProfile({
   setStep,
@@ -38,7 +39,7 @@ function CreateProfile({
     <div className="w-full max-w-xl">
       {/* back button */}
       <Button variant="ghost" onClick={() => setStep(1)} className="mb-4">
-        ← Back
+        <BackArrow /> Back
       </Button>
 
       {/* Avatar picker */}

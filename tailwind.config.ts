@@ -51,6 +51,7 @@ export default {
           "5": "hsl(var(--chart-5))",
         },
         bgWhiteGray: "#F5F5F5",
+        bgOffwhite: "#FAFAFA",
         bgGreen: "#34C759",
         borderGray: "#D9D9D9",
         primaryBlue: "#286CFF",
@@ -88,7 +89,7 @@ export default {
       backgroundImage: {
         "custom-gradient": "linear-gradient(45deg, #F95A04 35%, #FD841B 40%);",
         "demo-gradient":
-          "linear-gradient(5deg, #5FBCFF 5%, #286CFF 55%)",
+          "linear-gradient(35deg, #5FBCFF -38%, #286CFF 65%)",
       },
       screens: {
         "2xl": "1600px"

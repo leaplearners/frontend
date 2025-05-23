@@ -20,11 +20,16 @@ export interface Quiz {
     date: string;
     score: number;
   }[];
+  questions: {
+    question: string;
+    options: [string, string, string, string];
+  }[];
+  correctAnswers: string[];
 }
 
 export interface VideoTopic {
   title: string;
   image: StaticImageData;
   description: string;
-  subtopics: { name: string; completed: boolean }[];
+  subtopics: { name: string; status: string }[];
 }

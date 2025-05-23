@@ -5,6 +5,7 @@ import Link from "next/link";
 import React, { useState, useMemo, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import BackArrow from "@/assets/svgs/arrowback";
 
 export default function CourseList() {
   const pathname = usePathname();
@@ -112,9 +113,9 @@ export default function CourseList() {
             {topicSlug && (
               <Link
                 href={`/dashboard/${courseSlug}`}
-                className="md:hidden mb-4 inline-block text-primaryBlue font-medium"
+                className="md:hidden mb-4 text-primaryBlue font-medium flex items-center gap-2"
               >
-                ← Back to Topics
+                <BackArrow color="#286cff" /> Back to Topics
               </Link>
             )}
 

@@ -1,3 +1,4 @@
+import BackArrow from "@/assets/svgs/arrowback";
 import { Progress } from "@/components/ui/progress";
 import { Course } from "@/lib/types";
 import { convertDuration, getCurrentTopic, slugify } from "@/lib/utils";
@@ -45,7 +46,7 @@ export default function LearningCard({ course }: { course: Course }) {
           )}`}
           className="flex items-center gap-1 text-primaryBlue font-medium text-sm"
         >
-          Resume Learning <MoveRight className="w-4 mt-1" />
+          Resume Learning <BackArrow color="#286cff" flipped />
         </Link>
       </div>
     </div>

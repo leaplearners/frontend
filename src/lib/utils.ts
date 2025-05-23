@@ -6,7 +6,6 @@ import ans from "@/assets/ans.png";
 import ratio from "@/assets/ratio.png";
 import measurement from "@/assets/measurement.png";
 import { Course, Quiz, VideoTopic } from "./types";
-import { StaticImageData } from "next/image";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -204,8 +203,32 @@ export const convertDuration = (progress: number, duration: number) => {
   }
 };
 
+function makeQuestions(n: number): Quiz["questions"] {
+  return Array.from({ length: n }, (_, i) => ({
+    question: `Sample question ${i + 1}: What is the answer to question ${i + 1}?`,
+    options: [
+      `Option ${i + 1}.A`,
+      `Option ${i + 1}.B`,
+      `Option ${i + 1}.C`,
+      `Option ${i + 1}.D`,
+    ] as [string, string, string, string],
+  }));
+}
+
+// helper to pick the “A” option as correct for each
+function makeAnswers(n: number): Quiz["correctAnswers"] {
+  return Array.from({ length: n }, (_, i) => `Option ${i + 1}.A`);
+}
+
+// lib/utils.ts
 export function slugify(str: string) {
-  return str.toLowerCase().replace(/\s+/g, "-");
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, "-and-")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 export function getCurrentTopic(course: Course): {
@@ -231,6 +254,8 @@ export const dummyQuizzes: Quiz[] = [
   {
     title: "Quiz 1",
     attempts: [{ label: "Attempt 1", date: "20-10-2025", score: 62 }],
+    questions: makeQuestions(20),
+    correctAnswers: makeAnswers(20),
   },
   {
     title: "Quiz 2",
@@ -239,6 +264,14 @@ export const dummyQuizzes: Quiz[] = [
       { label: "Attempt 2", date: "20-10-2025", score: 78 },
       { label: "Attempt 3", date: "20-10-2025", score: 85 },
     ],
+    questions: makeQuestions(20),
+    correctAnswers: makeAnswers(20),
+  },
+  {
+    title: "Quiz 3",
+    attempts: [],
+    questions: makeQuestions(20),
+    correctAnswers: makeAnswers(20),
   },
 ];
 
@@ -248,9 +281,9 @@ export const dummyVideoTopics: VideoTopic[] = [
     image: algebra,
     description: "Learn the basics of addition and subtraction.",
     subtopics: [
-      { name: "Simple Addition", completed: false },
-      { name: "Simple Subtraction", completed: false },
-      { name: "Word Problems", completed: false },
+      { name: "Simple Addition", status: "complete" },
+      { name: "Simple Subtraction", status: "current" },
+      { name: "Word Problems", status: "incomplete" },
     ],
   },
   {
@@ -258,9 +291,9 @@ export const dummyVideoTopics: VideoTopic[] = [
     image: measurement,
     description: "Master multiplication and division techniques.",
     subtopics: [
-      { name: "Times Tables", completed: false },
-      { name: "Long Division", completed: false },
-      { name: "Word Problems", completed: false },
+      { name: "Times Tables", status: "complete" },
+      { name: "Long Division", status: "complete" },
+      { name: "Word Problems", status: "incomplete" },
     ],
   },
   {
@@ -268,9 +301,9 @@ export const dummyVideoTopics: VideoTopic[] = [
     image: ratio,
     description: "Understand fractions and their applications.",
     subtopics: [
-      { name: "Simplifying Fractions", completed: false },
-      { name: "Adding Fractions", completed: false },
-      { name: "Mixed Numbers", completed: false },
+      { name: "Simplifying Fractions", status: "complete" },
+      { name: "Adding Fractions", status: "current" },
+      { name: "Mixed Numbers", status: "incomplete" },
     ],
   },
   {
@@ -278,9 +311,9 @@ export const dummyVideoTopics: VideoTopic[] = [
     image: ans,
     description: "Work with decimals in various contexts.",
     subtopics: [
-      { name: "Decimal Addition", completed: false },
-      { name: "Decimal Multiplication", completed: false },
-      { name: "Rounding Decimals", completed: false },
+      { name: "Decimal Addition", status: "current" },
+      { name: "Decimal Multiplication", status: "incomplete" },
+      { name: "Rounding Decimals", status: "incomplete" },
     ],
   },
   {
@@ -288,9 +321,26 @@ export const dummyVideoTopics: VideoTopic[] = [
     image: algebra,
     description: "Explore shapes, angles, and measurements.",
     subtopics: [
-      { name: "Triangles", completed: false },
-      { name: "Circles", completed: false },
-      { name: "Perimeter & Area", completed: false },
+      { name: "Triangles", status: "incomplete" },
+      { name: "Circles", status: "incomplete" },
+      { name: "Perimeter & Area", status: "current" },
+    ],
+  },
+  {
+    title: "Angles",
+    image: algebra,
+    description: "Dive deep into the world of angles and their properties.",
+    subtopics: [
+      { name: "Acute Angles", status: "incomplete" },
+      { name: "Obtuse Angles", status: "incomplete" },
+      { name: "Right Angles", status: "incomplete" },
+      { name: "Straight Angles", status: "incomplete" },
+      { name: "Reflex Angles", status: "incomplete" },
+      { name: "Complementary Angles", status: "incomplete" },
+      { name: "Supplementary Angles", status: "incomplete" },
+      { name: "Angles in a Triangle", status: "incomplete" },
+      { name: "Angles in a Quadrilateral", status: "incomplete" },
+      { name: "Angles on Parallel Lines", status: "incomplete" },
     ],
   },
 ];
