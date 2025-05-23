@@ -221,6 +221,7 @@ function makeAnswers(n: number): Quiz["correctAnswers"] {
 }
 
 // lib/utils.ts
+// lib/utils.ts
 export function slugify(str: string) {
   return str
     .toLowerCase()

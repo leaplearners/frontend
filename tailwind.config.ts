@@ -84,7 +84,7 @@ export default {
       boxShadow: {
         custom:
           "`0px 61px 500px 0px rgba(20, 25, 32, 0.01),0px 6.514px 33.251px 0px rgba(20, 25, 32, 0.03), 0px 2.787px 13.836px 0px rgba(20, 25, 32, 0.07)`",
-        demoShadow: "inset 0px 4px 0px 0px #FFFFFF47",
+        demoShadow: "inset 0px 4px 0px 0px #FFFFFF20",
       },
       backgroundImage: {
         "custom-gradient": "linear-gradient(45deg, #F95A04 35%, #FD841B 40%);",
