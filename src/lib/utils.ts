@@ -204,20 +204,40 @@ export const convertDuration = (progress: number, duration: number) => {
 };
 
 function makeQuestions(n: number): Quiz["questions"] {
-  return Array.from({ length: n }, (_, i) => ({
-    question: `Sample question ${i + 1}: What is the answer to question ${i + 1}?`,
-    options: [
-      `Option ${i + 1}.A`,
-      `Option ${i + 1}.B`,
-      `Option ${i + 1}.C`,
-      `Option ${i + 1}.D`,
-    ] as [string, string, string, string],
-  }));
+  return Array.from({ length: n }, (_, i) => {
+    // For demonstration, mark every 3rd question as fill-in-blank:
+    const idx = i + 1;
+    const isBlank = idx % 3 === 0;  
+
+    if (isBlank) {
+      return {
+        question: `Sample FILL-IN question ${idx}: Type the answer for ${idx}.`,
+        isFillInBlank: true,
+      };
+    } else {
+      return {
+        question: `Sample MCQ question ${idx}: What is the answer to question ${idx}?`,
+        options: [
+          `Option ${idx}.A`,
+          `Option ${idx}.B`,
+          `Option ${idx}.C`,
+          `Option ${idx}.D`,
+        ],
+      };
+    }
+  });
 }
 
 // helper to pick the “A” option as correct for each
-function makeAnswers(n: number): Quiz["correctAnswers"] {
-  return Array.from({ length: n }, (_, i) => `Option ${i + 1}.A`);
+function makeAnswers(n: number): Array<string> {
+  return Array.from({ length: n }, (_, i) => {
+    const idx = i + 1;
+    if (idx % 3 === 0) {
+      return "test answer";
+    } else {
+      return `Option ${i + 1}.A`;
+    }
+  });
 }
 
 // lib/utils.ts
@@ -255,8 +275,8 @@ export const dummyQuizzes: Quiz[] = [
   {
     title: "Quiz 1",
     attempts: [{ label: "Attempt 1", date: "20-10-2025", score: 62 }],
-    questions: makeQuestions(20),
-    correctAnswers: makeAnswers(20),
+    questions: makeQuestions(10),
+    correctAnswers: makeAnswers(10),
   },
   {
     title: "Quiz 2",
@@ -265,14 +285,14 @@ export const dummyQuizzes: Quiz[] = [
       { label: "Attempt 2", date: "20-10-2025", score: 78 },
       { label: "Attempt 3", date: "20-10-2025", score: 85 },
     ],
-    questions: makeQuestions(20),
-    correctAnswers: makeAnswers(20),
+    questions: makeQuestions(12),
+    correctAnswers: makeAnswers(12),
   },
   {
     title: "Quiz 3",
     attempts: [],
-    questions: makeQuestions(20),
-    correctAnswers: makeAnswers(20),
+    questions: makeQuestions(8),
+    correctAnswers: makeAnswers(8),
   },
 ];
 

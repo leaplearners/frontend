@@ -127,6 +127,9 @@ export default function CourseList() {
               <Button
                 variant="outline"
                 className="rounded-full text-primaryBlue font-medium text-xs"
+                onClick={() =>
+                  router.push(`/videos-quiz/${courseSlug}/${topicSlug}`)
+                }
               >
                 Watch Video <img src="/play.svg" alt="" />
               </Button>
@@ -142,7 +145,11 @@ export default function CourseList() {
                   <h3 className="font-medium">{quiz.title}</h3>
                   <Button
                     onClick={() =>
-                      router.push(`${pathname}/${slugify(quiz.title)}`)
+                      router.push(
+                        `/videos-quiz/${courseSlug}/${topicSlug}/${slugify(
+                          quiz.title
+                        )}`
+                      )
                     }
                     className="rounded-full bg-primaryBlue text-white text-xs py-2 px-4"
                   >

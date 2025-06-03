@@ -22,7 +22,8 @@ export interface Quiz {
   }[];
   questions: {
     question: string;
-    options: [string, string, string, string];
+    options?: [string, string, string, string];
+    isFillInBlank?: boolean;
   }[];
   correctAnswers: string[];
 }

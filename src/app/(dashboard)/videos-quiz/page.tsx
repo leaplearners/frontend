@@ -4,7 +4,7 @@ import React from "react";
 
 function Page() {
   return (
-    <div className="bg-bgWhiteGray">
+    <div className="bg-bgWhiteGray min-h-screen">
       <Navbar />
       <VideoQuizComponent />
     </div>

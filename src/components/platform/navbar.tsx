@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
+import TagIcon from "@/assets/svgs/tag";
 
 const routes = [
   { name: "Dashboard", path: "/dashboard" },
@@ -19,9 +20,9 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <nav className="bg-white w-full shadow-sm">
-      <div className="max-w-screen-2xl mx-auto px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 py-4 flex justify-between md:justify-normal md:gap-12 lg:gap-24 items-center">
-        {/* logo */}
+    <nav className="bg-white w-full shadow-sm relative z-20">
+      <div className="max-w-screen-2xl mx-auto px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 py-4 flex items-center">
+        {/* Logo */}
         <Link href="/" onClick={() => setMobileOpen(false)}>
           <Image
             src="/logo.svg"
@@ -32,8 +33,8 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* desktop links */}
-        <div className="hidden md:flex gap-6 lg:gap-12">
+        {/* Desktop links */}
+        <div className="hidden md:flex gap-6 lg:gap-12 ml-8">
           {routes.map((route) => (
             <Link
               key={route.name}
@@ -49,9 +50,24 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* mobile toggle */}
+        <div className="flex-1" />
+
+        <div className="hidden md:flex items-center gap-4">
+          <button
+            className="p-2 text-gray-700 hover:text-blue-500 transition"
+            aria-label="Tag menu"
+          >
+            <TagIcon />
+          </button>
+
+          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+            <span className="text-gray-500 text-sm font-semibold">JD</span>
+          </div>
+        </div>
+
+        {/* Mobile toggle */}
         <button
-          className="md:hidden p-2 text-gray-700"
+          className="md:hidden p-2 text-gray-700 ml-2"
           onClick={() => setMobileOpen((o) => !o)}
           aria-label="Toggle menu"
         >
@@ -59,9 +75,9 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* mobile menu */}
+      {/* Mobile menu (full‐height overlay) */}
       {mobileOpen && (
-        <div className="md:hidden bg-white border-t shadow-inner absolute w-full h-screen z-10">
+        <div className="md:hidden bg-white border-t shadow-inner absolute top-full left-0 w-full h-screen z-10">
           <div className="flex flex-col px-4 py-2 space-y-1">
             {routes.map((route) => (
               <Link
@@ -77,6 +93,13 @@ export default function Navbar() {
                 {route.name}
               </Link>
             ))}
+
+            <div className="mt-4 border-t pt-4 flex items-center gap-4">
+              <TagIcon />
+              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                <span className="text-gray-500 text-sm font-semibold">JD</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
