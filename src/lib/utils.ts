@@ -298,11 +298,11 @@ export const dummyQuizzes: Quiz[] = [
 
 export const dummyVideoTopics: VideoTopic[] = [
   {
-    title: "Addition & Subtraction",
+    title: "Mathematics",
     image: algebra,
     description: "Learn the basics of addition and subtraction.",
     subtopics: [
-      { name: "Simple Addition", status: "complete" },
+      { name: "Algebra Basics", status: "complete" },
       { name: "Simple Subtraction", status: "current" },
       { name: "Word Problems", status: "incomplete" },
     ],

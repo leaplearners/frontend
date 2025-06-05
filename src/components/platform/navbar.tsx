@@ -4,20 +4,29 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Menu, X } from "lucide-react";
 import TagIcon from "@/assets/svgs/tag";
+import { dummyProfiles } from "@/lib/utils";
 
 const routes = [
   { name: "Dashboard", path: "/dashboard" },
   { name: "Library", path: "/library" },
   { name: "Videos & Quiz", path: "/videos-quiz" },
   { name: "Glossary", path: "/glossary" },
-  { name: "Settings", path: "/settings" },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState(dummyProfiles[0].name);
 
   return (
     <nav className="bg-white w-full shadow-sm relative z-20">
@@ -42,7 +51,7 @@ export default function Navbar() {
               className={`font-medium text-sm md:text-base ${
                 pathname.startsWith(route.path)
                   ? "text-blue-500"
-                  : "text-gray-700"
+                  : "text-textSubtitle"
               } hover:text-blue-500 transition`}
             >
               {route.name}
@@ -60,8 +69,58 @@ export default function Navbar() {
             <TagIcon />
           </button>
 
-          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-            <span className="text-gray-500 text-sm font-semibold">JD</span>
+          <div>
+            <DropdownMenu open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  onClick={() => setIsProfileOpen(true)}
+                  className="flex items-center focus:outline-none cursor-pointer"
+                >
+                  <div className="w-10 h-10 bg-[#D9D9D9] rounded-full flex items-center justify-center overflow-hidden cursor-pointer">
+                    <span className="text-gray-500 text-sm font-semibold">
+                      {selectedProfile.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-60 p-1 mt-1 rounded-md shadow-lg"
+                align="end"
+                onMouseEnter={() => setIsProfileOpen(true)}
+                onMouseLeave={() => setIsProfileOpen(false)}
+              >
+                {dummyProfiles.map((profile, index) => (
+                  <DropdownMenuItem
+                    key={index}
+                    onClick={() => {
+                      setSelectedProfile(profile.name);
+                      setIsProfileOpen(false);
+                    }}
+                    className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm flex items-center gap-2"
+                  >
+                    <span className="bg-[#D9D9D9] p-4 rounded-full text-sm" />
+                    {profile.name}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm">
+                  Edit Profiles
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm">
+                  Contact Us
+                </DropdownMenuItem>
+                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm">
+                  FAQ
+                </DropdownMenuItem>
+                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm">
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer text-red-500 hover:bg-red-50 hover:text-red-600 rounded-sm">
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
