@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Gorditas, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import { ProfileProvider } from "@/context/profileContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,7 +60,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${gorditas.variable} ${generalSans.className}`}
       >
-        {children}
+        <ProfileProvider>{children}</ProfileProvider>
       </body>
     </html>
   );

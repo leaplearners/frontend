@@ -2,7 +2,7 @@ import BackArrow from "@/assets/svgs/arrowback";
 import { Progress } from "@/components/ui/progress";
 import { Course } from "@/lib/types";
 import { convertDuration, getCurrentTopic, slugify } from "@/lib/utils";
-import { Clock, MoveRight } from "lucide-react";
+import { Clock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Layers } from "lucide-react";
-import { notFound, useRouter } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
 import videoLine from "@/assets/video-line.svg";
 import { dummyVideoTopics, slugify } from "@/lib/utils";
 import groupLines from "@/assets/grouplines.svg";
@@ -19,11 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import BackArrow from "@/assets/svgs/arrowback";
 
-interface PageProps {
-  params: { topic: string };
-}
-
-export default function VideoTopicPage({ params }: PageProps) {
+export default function VideoTopicPage() {
+  const params = useParams();
   const topic = dummyVideoTopics.find((t) => slugify(t.title) === params.topic);
   if (!topic) notFound();
   const { push } = useRouter();

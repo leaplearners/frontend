@@ -11,7 +11,6 @@ export default function CourseList() {
   const pathname = usePathname();
   const router = useRouter();
   const [selectedCurriculum, setSelectedCurriculum] = useState("uk");
-
   const pathParts = useMemo(() => pathname.split("/"), [pathname]);
   const courseSlug = pathParts[2] || "";
   const topicSlug = pathParts[3] || "";
@@ -23,8 +22,11 @@ export default function CourseList() {
 
   useEffect(() => {
     if (course && !topicSlug) {
-      const firstTopicSlug = slugify(course.topics[0].title);
-      router.replace(`/dashboard/${courseSlug}/${firstTopicSlug}`);
+      const isMobile = window.innerWidth < 768;
+      if (!isMobile) {
+        const firstTopicSlug = slugify(course.topics[0].title);
+        router.replace(`/dashboard/${courseSlug}/${firstTopicSlug}`);
+      }
     }
   }, [course, topicSlug, courseSlug, router]);
 
@@ -43,7 +45,7 @@ export default function CourseList() {
   if (!course) {
     return (
       <div className="p-8 text-center text-red-500">
-        Course “{courseSlug}” not found.
+        Course "{courseSlug}" not found.
       </div>
     );
   }
@@ -70,7 +72,7 @@ export default function CourseList() {
       <div className="flex gap-6">
         {/* Sidebar - Hidden on mobile when topic selected */}
         <div
-          className={`max-w-xs w-full border border-dashed flex flex-col max-h-[80vh] h-fit scrollbar-hide overflow-auto ${
+          className={`md:max-w-xs w-full border border-dashed flex flex-col max-h-[80vh] h-fit scrollbar-hide overflow-auto ${
             topicSlug ? "hidden md:flex" : "flex"
           }`}
         >

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,22 +11,68 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X } from "lucide-react";
+import {
+  CircleHelp,
+  Menu,
+  PencilLine,
+  Settings,
+  UserCircle,
+  X,
+} from "lucide-react";
 import TagIcon from "@/assets/svgs/tag";
-import { dummyProfiles } from "@/lib/utils";
-
-const routes = [
-  { name: "Dashboard", path: "/dashboard" },
-  { name: "Library", path: "/library" },
-  { name: "Videos & Quiz", path: "/videos-quiz" },
-  { name: "Glossary", path: "/glossary" },
-];
+import { useSelectedProfile } from "@/hooks/use-selectedProfile";
+import LogoutIcon from "@/assets/svgs/logout";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { push } = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [selectedProfile, setSelectedProfile] = useState(dummyProfiles[0].name);
+  const { activeProfile, changeProfile, isLoaded, profiles } =
+    useSelectedProfile();
+
+  const platformRoutes = [
+    { name: "Dashboard", path: "/dashboard" },
+    { name: "Library", path: "/library" },
+    { name: "Videos & Quiz", path: "/videos-quiz" },
+    { name: "Glossary", path: "/glossary" },
+  ];
+
+  const tuitionRoutes = [
+    { name: "Dashboard", path: "/dashboard" },
+    { name: "Homework", path: "/homework" },
+    { name: "Independent Learning", path: "/glossary" },
+    { name: "Messages", path: "/messages" },
+    { name: "Sessions", path: "/sessions" },
+  ];
+
+  const routes =
+    activeProfile?.subscriptionName === "Tuition"
+      ? tuitionRoutes
+      : platformRoutes;
+
+  if (!isLoaded) {
+    return (
+      <nav className="bg-white w-full shadow-sm relative z-20">
+        <div className="max-w-screen-2xl mx-auto px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 py-4 flex items-center">
+          <Link href="/">
+            <Image
+              src="/logo.svg"
+              alt="Logo"
+              width={0}
+              height={0}
+              className="w-24 h-auto"
+            />
+          </Link>
+          <div className="flex-1" />
+          <div
+            className="w-10 h-10 bg-gray-200 rounded-full"
+            id="loading-indicator"
+          />
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="bg-white w-full shadow-sm relative z-20">
@@ -62,66 +108,84 @@ export default function Navbar() {
         <div className="flex-1" />
 
         <div className="hidden md:flex items-center gap-4">
-          <button
-            className="p-2 text-gray-700 hover:text-blue-500 transition"
-            aria-label="Tag menu"
-          >
-            <TagIcon />
-          </button>
-
           <div>
             <DropdownMenu open={isProfileOpen} onOpenChange={setIsProfileOpen}>
               <DropdownMenuTrigger asChild>
                 <button
                   onClick={() => setIsProfileOpen(true)}
-                  className="flex items-center focus:outline-none cursor-pointer"
+                  className="p-2 text-gray-700 hover:text-blue-500 transition"
+                  aria-label="Tag menu"
                 >
-                  <div className="w-10 h-10 bg-[#D9D9D9] rounded-full flex items-center justify-center overflow-hidden cursor-pointer">
-                    <span className="text-gray-500 text-sm font-semibold">
-                      {selectedProfile.slice(0, 2).toUpperCase()}
-                    </span>
-                  </div>
+                  <TagIcon />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-60 p-1 mt-1 rounded-md shadow-lg"
+                className="w-60 max-h-[80vh] overflow-auto scrollbar-hide p-1 mt-1 rounded-md shadow-lg"
                 align="end"
                 onMouseEnter={() => setIsProfileOpen(true)}
                 onMouseLeave={() => setIsProfileOpen(false)}
               >
-                {dummyProfiles.map((profile, index) => (
+                {profiles.map((profile, index) => (
                   <DropdownMenuItem
                     key={index}
                     onClick={() => {
-                      setSelectedProfile(profile.name);
+                      changeProfile(profile.name);
                       setIsProfileOpen(false);
                     }}
-                    className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm flex items-center gap-2"
+                    className="px-3 py-2 text-sm cursor-pointer font-inter hover:bg-gray-100 rounded-sm flex items-center gap-2"
                   >
-                    <span className="bg-[#D9D9D9] p-4 rounded-full text-sm" />
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                      <span className="text-gray-400 text-xs font-medium">
+                        {profile.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    </div>
                     {profile.name}
                   </DropdownMenuItem>
                 ))}
-                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm">
+                <DropdownMenuItem
+                  onClick={() => push("/settings/profiles")}
+                  className="px-3 py-2 text-sm cursor-pointer font-inter hover:bg-gray-100 rounded-sm flex gap-3 ml-3 items-center"
+                >
+                  <PencilLine className="text-gray-400" />
                   Edit Profiles
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="my-1" />
-                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm">
+                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer font-inter hover:bg-gray-100 rounded-sm flex gap-3 ml-3 items-center">
+                  <UserCircle className="text-gray-400" />
                   Contact Us
                 </DropdownMenuItem>
-                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm">
+                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer font-inter hover:bg-gray-100 rounded-sm flex gap-3 ml-3 items-center">
+                  <CircleHelp className="text-gray-400" />
                   FAQ
                 </DropdownMenuItem>
-                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 rounded-sm">
+                <DropdownMenuItem
+                  onClick={() => push("/settings")}
+                  className="px-3 py-2 text-sm cursor-pointer font-inter hover:bg-gray-100 rounded-sm flex gap-3 ml-3 items-center"
+                >
+                  <Settings className="text-gray-400" />
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-1" />
-                <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer text-red-500 hover:bg-red-50 hover:text-red-600 rounded-sm">
+                <DropdownMenuItem
+                  onClick={() => {
+                    localStorage.removeItem("selectedProfile");
+                    localStorage.removeItem("activeProfile");
+                    push("/sign-in");
+                  }}
+                  className="px-3 py-2 text-sm cursor-pointer font-inter text-red-500 hover:bg-red-50 hover:text-red-600 rounded-sm flex gap-3 ml-3 items-center"
+                >
+                  <LogoutIcon />
                   Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          <button className="flex items-center focus:outline-none cursor-pointer">
+            <div className="w-10 h-10 bg-[#D9D9D9] rounded-full flex items-center justify-center overflow-hidden cursor-pointer">
+              <span className="text-gray-500 text-sm font-semibold">
+                {activeProfile?.name.slice(0, 2).toUpperCase()}
+              </span>
+            </div>
+          </button>
         </div>
 
         {/* Mobile toggle */}
@@ -156,7 +220,9 @@ export default function Navbar() {
             <div className="mt-4 border-t pt-4 flex items-center gap-4">
               <TagIcon />
               <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                <span className="text-gray-500 text-sm font-semibold">JD</span>
+                <span className="text-gray-500 text-sm font-semibold">
+                  {activeProfile?.name.slice(0, 2).toUpperCase()}
+                </span>
               </div>
             </div>
           </div>

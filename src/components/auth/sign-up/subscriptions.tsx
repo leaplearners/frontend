@@ -1,6 +1,9 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { subscriptionPlans } from "@/lib/utils";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import React from "react";
 
 function Subscriptions({ currentStep }: { currentStep: number }) {
@@ -12,7 +15,7 @@ function Subscriptions({ currentStep }: { currentStep: number }) {
       <h2 className="font-semibold text-primaryBlue text-xl md:text-2xl lg:text-4xl my-3 uppercase">
         CHOOSE THE PLAN BEST SUITED FOR YOUR CHILD
       </h2>
-      <div className="max-w-[100vw] w-full overflow-y-auto scrollbar-hide flex gap-4">
+      <div className="max-w-[100vw] w-full overflow-y-auto scrollbar-hide flex gap-4 justify-center">
         {subscriptionPlans.map((plan) => (
           <Card
             key={plan.title}
@@ -40,8 +43,14 @@ function Card({
   trialDays: number;
   features: string[];
 }) {
+  const { push } = useRouter();
   return (
-    <div className="min-h-[60vh] max-h-[80vh] grow bg-white p-[5px] max-w-[300px] min-w-[300px] md:max-w-[380px] w-full rounded-3xl space-y-6">
+    <div
+      onClick={() => {
+        push("/sign-in");
+      }}
+      className="min-h-[60vh] max-h-[80vh] grow bg-white p-[5px] max-w-[300px] min-w-[300px] md:max-w-[380px] w-full rounded-3xl space-y-6 cursor-pointer"
+    >
       <div className="bg-bgWhiteGray rounded-2xl p-4 space-y-4">
         <h4 className="text-textGray font-geist uppercase font-medium">
           The {title}

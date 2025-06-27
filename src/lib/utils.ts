@@ -1,11 +1,19 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import {
+  isAfter,
+  subDays,
+  subWeeks,
+  subMonths,
+  startOfDay,
+  endOfDay,
+} from "date-fns";
 import profileImage from "@/assets/profile-background.svg";
 import algebra from "@/assets/algebra.png";
 import ans from "@/assets/ans.png";
 import ratio from "@/assets/ratio.png";
 import measurement from "@/assets/measurement.png";
-import { Course, Quiz, VideoTopic } from "./types";
+import { Course, DateRange, Quiz, VideoTopic } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -32,30 +40,108 @@ export const subscriptionPlans: {
     trialDays: 20,
     features: Array(6).fill(dummySubscriptionFeature),
   },
-  {
-    title: "group tuition",
-    price: 200,
-    trialDays: 12,
-    features: Array(4).fill(dummySubscriptionFeature),
-  },
-  {
-    title: "One-to-one tuition",
-    price: 400,
-    trialDays: 40,
-    features: Array(6).fill(dummySubscriptionFeature),
-  },
 ];
 
 export const dummyProfiles = [
-  { name: "Jonathan", year: 1, image: profileImage, status: "active" },
-  { name: "John", year: 1, image: profileImage, status: "active" },
-  { name: "Doku", year: 1, image: profileImage, status: "active" },
-  { name: "Deku", year: 1, image: profileImage, status: "inactive" },
-  { name: "Midoriyama", year: 3, image: profileImage, status: "inactive" },
-  { name: "Midoriyama", year: 3, image: profileImage, status: "active" },
-  { name: "Midoriyama", year: 3, image: profileImage, status: "active" },
-  { name: "Midoriyama", year: 3, image: profileImage, status: "active" },
-  { name: "Midoriyama", year: 3, image: profileImage, status: "active" },
+  {
+    id: "1",
+    name: "Jonathan",
+    year: 1,
+    image: profileImage,
+    status: "active",
+    subscriptionDate: "2023-10-01",
+    duration: 30,
+    subscriptionAmount: 100,
+    subscriptionName: "The platform",
+  },
+  {
+    id: "2",
+    name: "John",
+    year: 1,
+    image: profileImage,
+    status: "active",
+    subscriptionDate: "2023-09-15",
+    duration: 60,
+    subscriptionAmount: 400,
+    subscriptionName: "Tuition",
+  },
+  {
+    id: "3",
+    name: "Doku",
+    year: 1,
+    image: profileImage,
+    status: "active",
+    subscriptionDate: "2023-08-20",
+    duration: 30,
+    subscriptionAmount: 200,
+    subscriptionName: "The platform",
+  },
+  {
+    id: "4",
+    name: "Deku",
+    year: 1,
+    image: profileImage,
+    status: "inactive",
+    subscriptionDate: "2023-07-10",
+    duration: 60,
+    subscriptionAmount: 400,
+    subscriptionName: "Tuition",
+  },
+  {
+    id: "5",
+    name: "Midoriyama",
+    year: 3,
+    image: profileImage,
+    status: "inactive",
+    subscriptionDate: "2023-06-05",
+    duration: 30,
+    subscriptionAmount: 100,
+    subscriptionName: "The platform",
+  },
+  {
+    id: "6",
+    name: "Midoriyama",
+    year: 3,
+    image: profileImage,
+    status: "active",
+    subscriptionDate: "2023-05-01",
+    duration: 60,
+    subscriptionAmount: 400,
+    subscriptionName: "Tuition",
+  },
+  {
+    id: "7",
+    name: "Midoriyama",
+    year: 3,
+    image: profileImage,
+    status: "active",
+    subscriptionDate: "2023-04-15",
+    duration: 30,
+    subscriptionAmount: 200,
+    subscriptionName: "The platform",
+  },
+  {
+    id: "8",
+    name: "Midoriyama",
+    year: 3,
+    image: profileImage,
+    status: "active",
+    subscriptionDate: "2023-03-10",
+    duration: 60,
+    subscriptionAmount: 400,
+    subscriptionName: "Tuition",
+  },
+  {
+    id: "9",
+    name: "Midoriyama",
+    year: 3,
+    image: profileImage,
+    status: "active",
+    subscriptionDate: "2023-02-01",
+    duration: 30,
+    subscriptionAmount: 100,
+    subscriptionName: "The platform",
+  },
 ];
 
 export const courses: Course[] = [
@@ -207,7 +293,7 @@ function makeQuestions(n: number): Quiz["questions"] {
   return Array.from({ length: n }, (_, i) => {
     // For demonstration, mark every 3rd question as fill-in-blank:
     const idx = i + 1;
-    const isBlank = idx % 3 === 0;  
+    const isBlank = idx % 3 === 0;
 
     if (isBlank) {
       return {
@@ -363,5 +449,185 @@ export const dummyVideoTopics: VideoTopic[] = [
       { name: "Angles in a Quadrilateral", status: "incomplete" },
       { name: "Angles on Parallel Lines", status: "incomplete" },
     ],
+  },
+];
+
+export function generateHomeworkWithStatus(
+  statuses: readonly ["TO-DO", "SUBMITTED", "DONE AND MARKED"]
+): {
+  title: string;
+  due: string;
+  course: string;
+  topic: string;
+  href: string;
+  status: (typeof statuses)[number];
+}[] {
+  const today = new Date();
+  const getRandomOffset = () => Math.floor(Math.random() * 14 - 7); // -7 to +6 days
+  const getRandomStatus = (): (typeof statuses)[number] =>
+    statuses[Math.floor(Math.random() * statuses.length)];
+
+  return courses.flatMap((course) =>
+    course.topics.map((topic, index) => {
+      const offset = getRandomOffset();
+      const due = new Date();
+      due.setDate(today.getDate() + offset);
+      return {
+        title: `Homework ${index + 1}`,
+        course: course.course,
+        topic: topic.title,
+        due: due.toISOString(),
+        href: `/dashboard/${slugify(course.course)}/${slugify(topic.title)}`,
+        status: getRandomStatus(),
+      };
+    })
+  );
+}
+
+export function generateHomeworkWithDates() {
+  const today = new Date();
+  const getRandomOffset = () => Math.floor(Math.random() * 14 - 7);
+  return courses.flatMap((course) =>
+    course.topics.map((topic, index) => {
+      const offset = getRandomOffset();
+      const due = new Date();
+      due.setDate(today.getDate() + offset);
+      return {
+        title: `Homework ${index + 1}`,
+        course: course.course,
+        topic: topic.title,
+        due: due.toISOString(),
+        href: `/dashboard/${slugify(course.course)}/${slugify(topic.title)}`,
+      };
+    })
+  );
+}
+
+export function isWithinDateRange(date: Date, range: DateRange): boolean {
+  const now = new Date();
+  const start = (d: Date) => startOfDay(d);
+  const end = (d: Date) => endOfDay(d);
+
+  switch (range) {
+    case "ALL":
+      return true;
+    case "TODAY":
+      return date >= start(now) && date <= end(now);
+    case "LAST_3_DAYS":
+      return isAfter(date, subDays(now, 3));
+    case "LAST_WEEK":
+      return isAfter(date, subWeeks(now, 1));
+    case "LAST_TWO_WEEKS":
+      return isAfter(date, subWeeks(now, 2));
+    case "LAST_MONTH":
+      return isAfter(date, subMonths(now, 1));
+    case "LAST_3_MONTHS":
+      return isAfter(date, subMonths(now, 3));
+    default:
+      return true;
+  }
+}
+
+export const formatDisplayDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
+  const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+  return {
+    date: `${months[date.getMonth()]} ${date.getDate()}`,
+    day: days[date.getDay()],
+  };
+};
+
+export const months = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+export const daysOfWeek = ["SUN", "MON", "TUE", "WED", "THUR", "FRI", "SAT"];
+
+export const formatDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const chats = [
+  {
+    id: "tutor",
+    name: "Mr. Prosper Awoniyi",
+    role: "Math Tutor",
+    avatar: "/api/placeholder/50/50",
+    lastMessage: "I've shared the study materials",
+    lastTime: "10:32 AM",
+    unread: 2,
+    online: true,
+  },
+  {
+    id: "student1",
+    name: "Sarah Johnson",
+    role: "Biology Student",
+    avatar: "/api/placeholder/50/50",
+    lastMessage: "Thank you for the lesson!",
+    lastTime: "9:45 AM",
+    unread: 0,
+    online: false,
+  },
+  {
+    id: "student2",
+    name: "Michael Chen",
+    role: "Physics Student",
+    avatar: "/api/placeholder/50/50",
+    lastMessage: "When is our next session?",
+    lastTime: "Yesterday",
+    unread: 1,
+    online: true,
+  },
+];
+
+export const defaultMessages = [
+  {
+    id: 1,
+    sender: "tutor",
+    text: "Hello! I noticed you're working on calculus. How can I help you today?",
+    timestamp: "10:30 AM",
+    type: "text",
+  },
+  {
+    id: 2,
+    sender: "tutor",
+    text: "I've prepared some materials on derivatives that might help with your current assignment.",
+    timestamp: "10:32 AM",
+    type: "text",
+  },
+  {
+    id: 3,
+    sender: "user",
+    text: "Thanks! Could you explain the chain rule with some practical examples?",
+    timestamp: "10:35 AM",
+    type: "text",
   },
 ];

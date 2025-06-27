@@ -34,3 +34,60 @@ export interface VideoTopic {
   description: string;
   subtopics: { name: string; status: string }[];
 }
+
+export interface User {
+  id: string;
+  name: string;
+  year: number;
+  image: string;
+  status: string;
+  subscriptionDate: string;
+  duration: number;
+  subscriptionAmount: number;
+  subscriptionName: string;
+}
+
+export type DateRange =
+  | "ALL"
+  | "TODAY"
+  | "LAST_3_DAYS"
+  | "LAST_WEEK"
+  | "LAST_TWO_WEEKS"
+  | "LAST_MONTH"
+  | "LAST_3_MONTHS";
+
+export const dateRangeLabels: Record<DateRange, string> = {
+  ALL: "All Time",
+  TODAY: "Today",
+  LAST_3_DAYS: "Last 3 Days",
+  LAST_WEEK: "Last Week",
+  LAST_TWO_WEEKS: "Last Two Weeks",
+  LAST_MONTH: "Last Month",
+  LAST_3_MONTHS: "Last 3 Months",
+};
+
+export type TimeSlot = {
+  id: string;
+  label: string;
+  value: string;
+};
+
+export type Session = {
+  id: number;
+  date: string;
+  name: string;
+  time: string;
+  timeSlot: string;
+  tutor: string;
+  issue?: string;
+};
+
+export interface Chat {
+  id: string;
+  name: string;
+  lastMessage: string;
+  lastTime: string;
+  unread: number;
+  online: boolean;
+  role: string;
+}

@@ -4,16 +4,10 @@ import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Profile } from "./p";
 import Image from "next/image";
 import { MoveLeft, MoveRight, PlusCircle } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 function ProfileSelection({
   profiles,
@@ -27,6 +21,7 @@ function ProfileSelection({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const { push } = useRouter();
 
   // which inactive profile was clicked (or null)
   const [inactiveProfile, setInactiveProfile] = useState<Profile | null>(null);
@@ -71,7 +66,11 @@ function ProfileSelection({
                   if (isInactive) {
                     setInactiveProfile(profile);
                   } else {
-                    /* go to dashboard */
+                    localStorage.setItem(
+                      "activeProfile",
+                      JSON.stringify(profile)
+                    );
+                    push("/dashboard");
                   }
                 }}
                 className={`

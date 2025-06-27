@@ -5,9 +5,12 @@ import Link from "next/link";
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useProfile } from "@/context/profileContext";
+import BackArrow from "@/assets/svgs/arrowback";
 
 function Library() {
   const router = useRouter();
+  const { activeProfile, isLoaded } = useProfile();
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
 
@@ -21,6 +24,24 @@ function Library() {
       return acc;
     }, {} as Record<string, typeof courses>);
   }, []);
+
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div>Loading...</div>
+      </div>
+    );
+  }
+  if (!activeProfile) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">No Profile Selected</h1>
+          <p className="text-gray-600">Please select a profile</p>
+        </div>
+      </div>
+    );
+  }
 
   // Get distinct course names for dropdown
   const distinctCourseNames = useMemo(
@@ -65,12 +86,16 @@ function Library() {
 
   return (
     <div className="px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 py-4 max-w-screen-2xl mx-auto min-h-screen">
-      <h1 className="text-xl font-medium text-textGray">Library</h1>
-      <p className="text-sm text-textSubtitle">
-        This tab contains videos and worksheets for the entire 11+ Maths
-        syllabus. We have numbered each section of the syllabus for easy
-        navigation.
-      </p>
+      {activeProfile.subscriptionName === "The platform" && (
+        <div>
+          <h1 className="text-xl font-medium text-textGray">Library</h1>
+          <p className="text-sm text-textSubtitle">
+            This tab contains videos and worksheets for the entire 11+ Maths
+            syllabus. We have numbered each section of the syllabus for easy
+            navigation.
+          </p>
+        </div>
+      )}
 
       {/* Course Selector Dropdown */}
       <div className="mb-6 mt-8">
@@ -89,8 +114,12 @@ function Library() {
       </div>
 
       <div className="flex gap-6">
-        {/* First Column - Course Topics List */}
-        <div className="max-w-xs w-full border border-dashed flex flex-col max-h-[80vh] h-fit scrollbar-hide overflow-auto">
+        {/* First Column - Course Topics List (Hidden on mobile when topic selected) */}
+        <div
+          className={`md:max-w-xs w-full border border-dashed flex flex-col max-h-[80vh] h-fit scrollbar-hide overflow-auto ${
+            selectedTopic ? "hidden md:flex" : "flex"
+          }`}
+        >
           {selectedCourseTopics.map((topic, idx) => (
             <button
               key={idx}
@@ -116,9 +145,23 @@ function Library() {
           ))}
         </div>
 
-        {/* Second Column - Topic Content */}
-        <div className="w-full flex justify-center">
+        {/* Second Column - Topic Content (Show when topic is selected) */}
+        <div
+          className={`w-full flex justify-center ${
+            selectedTopic ? "flex" : "hidden md:flex"
+          }`}
+        >
           <div className="space-y-6 max-w-2xl w-full">
+            {/* Mobile Back Button */}
+            {selectedTopic && (
+              <button
+                onClick={() => setSelectedTopic("")}
+                className="md:hidden mb-4 text-primaryBlue font-medium flex items-center gap-2"
+              >
+                <BackArrow color="#286cff" /> Back to Topics
+              </button>
+            )}
+
             {!selectedTopic ? (
               <div className="text-center py-12">
                 <p className="text-textSubtitle text-lg">
