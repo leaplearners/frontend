@@ -91,16 +91,22 @@ const Glossary = () => {
                       {selectedLetter}
                     </h2>
                   )}
-                  {(groupedTopics[selectedLetter] || []).map((topic, idx) => (
-                    <TopicCard
-                      key={idx}
-                      topic={topic}
-                      onClick={() => {
-                        setSelectedTopic(topic);
-                        setStep(1);
-                      }}
-                    />
-                  ))}
+                  {(groupedTopics[selectedLetter] || []).length > 0 ? (
+                    (groupedTopics[selectedLetter] || []).map((topic, idx) => (
+                      <TopicCard
+                        key={idx}
+                        topic={topic}
+                        onClick={() => {
+                          setSelectedTopic(topic);
+                          setStep(1);
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-textSubtitle">
+                      No topics found for letter {selectedLetter}
+                    </div>
+                  )}
                 </div>
               </>
             ),

@@ -212,8 +212,8 @@ function Page() {
                   Personal Details
                 </h3>
 
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 w-full">
+                  <div className="w-full">
                     <div className="text-xs font-medium">Name</div>
                     <input
                       type="text"
@@ -221,7 +221,7 @@ function Page() {
                       onChange={(e) =>
                         updateProfileName(selectedProfile.id, e.target.value)
                       }
-                      className="text-sm text-textSubtitle font-medium bg-transparent border-none focus:outline-none focus:ring-0 p-0"
+                      className="text-sm text-textSubtitle font-medium bg-transparent border-none focus:outline-none focus:ring-0 py-2 w-full"
                     />
                   </div>
                   <div className="cursor-pointer w-10 h-10 flex items-center justify-center">

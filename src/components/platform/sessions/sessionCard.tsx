@@ -1,8 +1,11 @@
+"use client";
+
 import React from "react";
 import { CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Session } from "@/lib/types";
 import { formatDisplayDate } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 
 const SessionSection = ({
   title,
@@ -81,17 +84,21 @@ const SessionSection = ({
 export default SessionSection;
 
 // Empty State Component
-export const EmptySessionsState = () => (
-  <div className="bg-white rounded-2xl p-8 shadow-sm border text-center flex flex-col items-center">
-    <div className="bg-blue-100 p-4 rounded-full mb-4">
-      <CalendarDays className="w-12 h-12 text-blue-600" />
+export const EmptySessionsState = () => {
+  const pathname = usePathname();
+  return (
+    <div className="bg-white rounded-2xl p-8 shadow-sm border text-center flex flex-col items-center">
+      <div className="bg-blue-100 p-4 rounded-full mb-4">
+        <CalendarDays className="w-12 h-12 text-blue-600" />
+      </div>
+      <h3 className="text-xl font-medium text-gray-900 mb-2">
+        No Sessions Booked Yet
+      </h3>
+      <p className="text-gray-600 mb-6 max-w-md">
+        You haven't booked any sessions yet. Select a date on the calendar to
+        schedule your first session with a{" "}
+        {pathname.includes("tutor") ? "student" : "tutor"}.
+      </p>
     </div>
-    <h3 className="text-xl font-medium text-gray-900 mb-2">
-      No Sessions Booked Yet
-    </h3>
-    <p className="text-gray-600 mb-6 max-w-md">
-      You haven't booked any sessions yet. Select a date on the calendar to
-      schedule your first session with a tutor.
-    </p>
-  </div>
-);
+  );
+};

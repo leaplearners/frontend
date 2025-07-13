@@ -608,26 +608,125 @@ export const chats = [
   },
 ];
 
-export const defaultMessages = [
+export const tutorHomeworkMockData = [
   {
-    id: 1,
-    sender: "tutor",
-    text: "Hello! I noticed you're working on calculus. How can I help you today?",
-    timestamp: "10:30 AM",
-    type: "text",
+    student: "Dean Henderson",
+    year: "Year 1",
+    homework: "Quiz 1",
+    topic: "Numbers",
+    status: "TO-DO",
+    action: "Start",
   },
   {
-    id: 2,
-    sender: "tutor",
-    text: "I've prepared some materials on derivatives that might help with your current assignment.",
-    timestamp: "10:32 AM",
-    type: "text",
+    student: "Deku",
+    year: "Year 4",
+    homework: "Quiz 4",
+    topic: "Place Value",
+    status: "SUBMITTED",
+    action: "View",
   },
   {
-    id: 3,
-    sender: "user",
-    text: "Thanks! Could you explain the chain rule with some practical examples?",
-    timestamp: "10:35 AM",
-    type: "text",
+    student: "Sung Jin Woo",
+    year: "Year 3",
+    homework: "Quiz 5",
+    topic: "Statistics",
+    status: "DONE AND MARKED",
+    action: "Review",
+  },
+  {
+    student: "Choso",
+    year: "Year 1",
+    homework: "Quiz 4",
+    topic: "Number",
+    status: "TO-DO",
+    action: "Start",
+  },
+  {
+    student: "Itadori",
+    year: "Year 1",
+    homework: "Quiz 2",
+    topic: "Algebra",
+    status: "SUBMITTED",
+    action: "View",
+  },
+  {
+    student: "Panda",
+    year: "Year 2",
+    homework: "Quiz 3",
+    topic: "Algebra",
+    status: "DONE AND MARKED",
+    action: "Review",
   },
 ];
+
+// Quick responses for messaging platform
+export const tutorQuickResponses = [
+  "I'll review your work and get back to you shortly.",
+  "Great question! Let me explain this step by step.",
+  "I've attached some additional resources for you.",
+  "Your progress is excellent! Keep up the good work.",
+  "Let's schedule a session to go through this in detail.",
+  "I'll send you some practice questions on this topic.",
+  "This is a common misconception. Here's the correct approach:",
+  "Your homework is due tomorrow. How are you progressing?",
+  "I've marked your assignment. Check your dashboard for feedback.",
+  "Would you like me to explain this concept further?"
+];
+
+export const studentQuickResponses = [
+  "I'm having trouble with this problem. Can you help?",
+  "I've completed my homework. Can you review it?",
+  "When is our next session?",
+  "I don't understand this concept. Can you explain?",
+  "Thank you for the explanation!",
+  "I've been practicing and I think I'm improving.",
+  "Can you send me more practice questions?",
+  "I'm ready for our lesson.",
+  "I have a question about the assignment.",
+  "Thank you for your help!"
+];
+
+// Response generation functions for messaging platform
+export const generateTutorResponse = (studentName: string, userMessage: string): string => {
+  const responses = [
+    "Thank you for explaining that! I understand it better now.",
+    "I'll practice this and let you know if I have more questions.",
+    "That makes so much sense! Thank you for your help.",
+    "I'm working on the homework now. I'll send it when I'm done.",
+    "Can you explain this part a bit more?",
+    "I've been practicing and I think I'm getting better at this.",
+    "When can we have our next session?",
+    "I have another question about a different topic.",
+    "Thank you for being so patient with me.",
+    "I'm ready for our next lesson!",
+    "I'm still confused about this concept. Can you help?",
+    "I've completed the assignment. Can you check it?",
+    "This is really helpful! Thank you.",
+    "I'm struggling with this problem. Can you guide me?",
+    "I think I understand now. Let me try solving it."
+  ];
+  
+  return responses[Math.floor(Math.random() * responses.length)];
+};
+
+export const generateStudentResponse = (tutorName: string, userMessage: string): string => {
+  const responses = [
+    `Thank you for your message! I'll review this and provide you with a detailed explanation.`,
+    `Great question! Let me break this down for you step by step.`,
+    `I appreciate you reaching out. This is an important concept to understand.`,
+    `Excellent work! I can see you're making good progress.`,
+    `I understand your confusion. Let me clarify this for you.`,
+    `That's a thoughtful question. Here's what you need to know.`,
+    `I'm here to help. Let me explain this concept clearly.`,
+    `You're on the right track! Let me guide you through this.`,
+    `I'll prepare some additional resources for you.`,
+    `Your dedication is impressive. Let's work through this together.`,
+    `I've marked your assignment. Check your dashboard for feedback.`,
+    `Let's schedule a session to go through this in detail.`,
+    `I'll send you some practice questions on this topic.`,
+    `This is a common misconception. Here's the correct approach:`,
+    `Your homework is due tomorrow. How are you progressing?`
+  ];
+  
+  return responses[Math.floor(Math.random() * responses.length)];
+};

@@ -120,7 +120,7 @@ export default function Navbar() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-60 max-h-[80vh] overflow-auto scrollbar-hide p-1 mt-1 rounded-md shadow-lg"
+                className="w-60 max-h-[80vh] overflow-auto scrollbar-hide p-1 mt-1 !rounded-xl shadow-lg"
                 align="end"
                 onMouseEnter={() => setIsProfileOpen(true)}
                 onMouseLeave={() => setIsProfileOpen(false)}

@@ -1,8 +1,11 @@
+"use client";
+
 import { Session } from "@/lib/types";
 import { useCallback } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { daysOfWeek, formatDateString, months } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
 
 export default function CalendarComponent({
   currentMonth,
@@ -55,12 +58,16 @@ export default function CalendarComponent({
 
   const days = getDaysInMonth();
 
+  const pathname = usePathname();
+
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border col-span-1 lg:col-span-2">
       <div className="mb-4">
-        <h3 className="font-medium text-sm">BOOK MEETING</h3>
+        <h3 className="font-medium text-sm">
+          {pathname.includes("tutor") ? "CALENDAR" : "BOOK MEETING"}
+        </h3>
         <p className="text-xs text-textSubtitle">
-          You can control availability by blocking any day
+          You can control availability by booking any day
         </p>
       </div>
 
@@ -104,20 +111,17 @@ export default function CalendarComponent({
               variant="ghost"
               onClick={() => onDateClick(day)}
               disabled={isPast}
-              className={`h-8 w-8 p-0 rounded-full font-medium mx-auto relative
+              className={`h-8 w-8 p-0 rounded-lg font-medium mx-auto relative
                 ${isPast ? "text-textSubtitle" : "text-black"}
                 ${
                   hasSession
-                    ? "bg-primaryBlue/10 text-primaryBlue hover:bg-primaryBlue/20"
+                    ? "bg-[#0097FF] text-white hover:bg-[#0097FF]/50"
                     : ""
                 }
-                ${isToday ? "ring-2 ring-blue-300" : ""}
+                ${isToday ? "ring-2 ring-primaryBlue" : ""}
               `}
             >
               {day}
-              {hasSession && (
-                <span className="absolute bottom-0 right-0 w-2 h-2 bg-primaryBlue/80 rounded-full transform translate-x-1/2 translate-y-1/2"></span>
-              )}
             </Button>
           );
         })}
