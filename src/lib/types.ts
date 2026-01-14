@@ -1,7 +1,7 @@
 import { StaticImageData } from "next/image";
 
 export interface Course {
-  image: StaticImageData;
+  imageUrl: string;
   course: string;
   topics: {
     title: string;
@@ -697,6 +697,7 @@ export interface Curriculum {
 export interface Lesson {
   id: string;
   title: string;
+  sectionId: string;
   description: string;
   content: string;
   orderIndex: number;
@@ -752,6 +753,7 @@ export interface ChildLesson {
   totalQuizzes: number;
   completionPercentage: number;
   lessonCompleted: boolean;
+  sectionId: string;
 }
 
 export interface Chat {
@@ -878,6 +880,18 @@ export interface HomeworkReview {
   percentage: number;
   results: any[];
   timeSpent: number;
+}
+
+export interface Section {
+  id: string;
+  title: string;
+  lessonsCount: number;
+  imageUrl: string;
+  lessons: {
+    id: string;
+    title: string;
+    orderIndex: number;
+  }[]
 }
 
 // Export socket types

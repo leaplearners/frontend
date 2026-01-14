@@ -1,14 +1,24 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useProfile } from "@/context/profileContext";
+import { useSelectedProfile } from "@/hooks/use-selectedProfile";
+import BackArrow from "@/assets/svgs/arrowback";
 import {
   useGetLibrary,
   useGetChildLessons,
   useGetLessonById,
   useGetQuizzesForLesson,
+  useGetCurricula,
 } from "@/lib/api/queries";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { usePatchVideoLessonProgress } from "@/lib/api/mutations";
 import LessonList from "./lessonList";
 import LessonContent from "./lessonContent";
@@ -21,28 +31,87 @@ interface LibraryProps {
 function Library({ curriculumId, lessonId }: LibraryProps) {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { activeProfile, isLoaded } = useProfile();
-  const [selectedCurriculum, setSelectedCurriculum] = useState("");
+  const {
+    selectedCurriculumId: profileSelectedCurriculumId,
+    setSelectedCurriculumId: setProfileSelectedCurriculumId,
+  } = useSelectedProfile();
+  const [selectedSection, setSelectedSection] = useState("");
   const [selectedLesson, setSelectedLesson] = useState("");
   const [user, setUser] = React.useState<any>({});
 
-  // Get curriculumId and lessonId from params or props
-  const urlCurriculumId = (params?.curriculumId as string) || curriculumId;
+  // Get curriculumId (which is actually sectionId) and lessonId from params or props
+  const urlSectionId = (params?.curriculumId as string) || curriculumId;
   const urlLessonId = (params?.lessonId as string) || lessonId;
 
+  // Read tag from URL query parameter
+  const tag = searchParams.get("tag");
+
+  // Fetch curricula by offerType (wait for user data to be loaded)
+  const { data: curriculaData } = useGetCurricula({
+    offerType: user?.data?.offerType || activeProfile?.offerType || "",
+  });
+
+  // Get curricula list for dropdown
+  const curriculaList = useMemo(() => {
+    return curriculaData?.curricula || [];
+  }, [curriculaData?.curricula]);
+
+  // Get default curriculum (first one)
+  const defaultCurriculumId = useMemo(() => {
+    if (curriculaList.length > 0) {
+      const firstCurriculum = curriculaList[0] as any;
+      return firstCurriculum.id || "";
+    }
+    return "";
+  }, [curriculaList]);
+
+  // Determine the actual selected curriculum ID
+  // Use profile's selectedCurriculumId, or default to first curriculum
+  const selectedCurriculum = useMemo(() => {
+    if (profileSelectedCurriculumId) {
+      return profileSelectedCurriculumId;
+    }
+    return defaultCurriculumId;
+  }, [profileSelectedCurriculumId, defaultCurriculumId]);
+
+  // Update profile's selectedCurriculumId when default changes (if not already set)
+  useEffect(() => {
+    if (defaultCurriculumId && !profileSelectedCurriculumId) {
+      setProfileSelectedCurriculumId(defaultCurriculumId);
+    }
+  }, [
+    defaultCurriculumId,
+    profileSelectedCurriculumId,
+    setProfileSelectedCurriculumId,
+  ]);
+
   const { data: library } = useGetLibrary(activeProfile?.id || "");
+
+  // Fetch lessons with curriculumId (from dropdown) and sectionId (from pathname)
+  // Only fetch if tag doesn't exist (normal mode)
   const { data: lessons } = useGetChildLessons(
     activeProfile?.id || "",
-    selectedCurriculum
+    selectedCurriculum || "",
+    tag ? undefined : urlSectionId
   );
+
+  // When tag exists, use urlSectionId (curriculumId) as the lesson ID
+  // Otherwise, use selectedLesson
+  const lessonIdForFetch = tag ? urlSectionId : selectedLesson || "";
   const { data: lessonDetail, isLoading: lessonLoading } = useGetLessonById(
-    selectedLesson || ""
+    lessonIdForFetch || ""
   );
-  const { data: lessonQuizzes } = useGetQuizzesForLesson(selectedLesson || "");
+  const { data: lessonQuizzes } = useGetQuizzesForLesson(
+    lessonIdForFetch || ""
+  );
 
   // Progress patch mutation (child video progress)
+  // When tag exists, use urlSectionId as lesson ID
+  const progressLessonId = tag ? urlSectionId : selectedLesson || "";
   const { mutate: patchProgress } = usePatchVideoLessonProgress(
-    selectedLesson || "",
+    progressLessonId || "",
     activeProfile?.id || ""
   );
 
@@ -56,10 +125,29 @@ function Library({ curriculumId, lessonId }: LibraryProps) {
     }
   }, []);
 
-  // Get curricula from library data
-  const curricula = useMemo(() => {
+  // Get sections from library data (these are sections, not curricula)
+  const sections = useMemo(() => {
     return library?.data || [];
   }, [library?.data]);
+
+  // Get lesson data from useGetLessonById
+  const lessonData = lessonDetail?.data;
+  const quizzes = lessonQuizzes?.data || [];
+
+  // Get section progress (using sectionId from pathname)
+  const sectionProgress = useMemo(() => {
+    const sectionId = selectedSection || urlSectionId;
+    return (library?.data || []).find((c: any) => c.id === sectionId)
+      ?.progress as
+      | { watchedVideoDuration?: number; isCompleted?: boolean }
+      | undefined;
+  }, [library?.data, selectedSection, urlSectionId]);
+
+  const isCompleted = Boolean(sectionProgress?.isCompleted);
+  const resumePositionSec = Math.max(
+    0,
+    Math.floor((sectionProgress?.watchedVideoDuration as number) || 0)
+  );
 
   // Get lessons for selected curriculum
   const selectedCurriculumLessons = useMemo(() => {
@@ -67,30 +155,36 @@ function Library({ curriculumId, lessonId }: LibraryProps) {
   }, [lessons?.data]);
 
   // Get current lesson details
+  // When tag exists, create a minimal lesson object from lessonData
   const currentLesson = useMemo(() => {
-    if (!selectedLesson || !selectedCurriculum) return null;
+    if (tag) {
+      // When tag exists, create lesson object from lessonData
+      if (!lessonData) return null;
+      return {
+        id: urlSectionId || "",
+        title: lessonData.title || "",
+        completionPercentage: 0,
+        videoCompleted: false,
+        quizzesPassed: 0,
+        totalQuizzes: quizzes.length,
+        watchedPosition: resumePositionSec,
+        lessonCompleted: isCompleted,
+      };
+    }
+    if (!selectedLesson) return null;
     return selectedCurriculumLessons.find(
       (lesson) => lesson.id === selectedLesson
     );
-  }, [selectedLesson, selectedCurriculum, selectedCurriculumLessons]);
-
-  // Get lesson data from useGetLessonById
-  const lessonData = lessonDetail?.data;
-  const quizzes = lessonQuizzes?.data || [];
-
-  // Get curriculum progress
-  const curriculumProgress = useMemo(() => {
-    return (library?.data || []).find((c: any) => c.id === selectedCurriculum)
-      ?.progress as
-      | { watchedVideoDuration?: number; isCompleted?: boolean }
-      | undefined;
-  }, [library?.data, selectedCurriculum]);
-
-  const isCompleted = Boolean(curriculumProgress?.isCompleted);
-  const resumePositionSec = Math.max(
-    0,
-    Math.floor((curriculumProgress?.watchedVideoDuration as number) || 0)
-  );
+  }, [
+    tag,
+    selectedLesson,
+    selectedCurriculumLessons,
+    lessonData,
+    urlSectionId,
+    quizzes.length,
+    resumePositionSec,
+    isCompleted,
+  ]);
 
   // Extract videos from lesson data
   const videos = useMemo(() => {
@@ -105,7 +199,7 @@ function Library({ curriculumId, lessonId }: LibraryProps) {
     video: HTMLVideoElement | null,
     force?: boolean
   ) => {
-    if (!video || !activeProfile?.id || !selectedLesson) return;
+    if (!video || !activeProfile?.id || !progressLessonId) return;
     if (isCompleted) return;
     const now = Date.now();
     if (!force && now - lastSentRef.current < 2000) return; // throttle ~2s
@@ -125,29 +219,27 @@ function Library({ curriculumId, lessonId }: LibraryProps) {
 
   const handleBackToLessons = () => {
     setSelectedLesson("");
-    router.push(`/library/${selectedCurriculum}`);
+    const sectionId = selectedSection || urlSectionId;
+    if (sectionId) {
+      router.push(`/library/${sectionId}`);
+    }
   };
 
   // Handle URL parameters and initialize selections
   useEffect(() => {
-    if (curricula.length > 0) {
-      // If we have curriculumId in URL, use it
-      if (urlCurriculumId) {
-        setSelectedCurriculum(urlCurriculumId);
-
-        // If we have lessonId in URL, use it
-        if (urlLessonId) {
-          setSelectedLesson(urlLessonId);
-        } else {
-          setSelectedLesson("");
-        }
-      } else if (!selectedCurriculum) {
-        // No curriculum in URL and no selection yet, select first curriculum
-        setSelectedCurriculum(curricula[0].id);
-        setSelectedLesson("");
-      }
+    // Set sectionId from URL (what we previously called curriculumId)
+    if (urlSectionId) {
+      setSelectedSection(urlSectionId);
     }
-  }, [curricula, urlCurriculumId, urlLessonId, selectedCurriculum]);
+
+    // Set lessonId from URL
+    if (urlLessonId) {
+      setSelectedLesson(urlLessonId);
+    } else if (urlSectionId) {
+      // If we have sectionId but no lessonId, clear lesson selection
+      setSelectedLesson("");
+    }
+  }, [urlSectionId, urlLessonId]);
 
   // Early returns after all hooks
   if (!isLoaded) {
@@ -168,10 +260,57 @@ function Library({ curriculumId, lessonId }: LibraryProps) {
     );
   }
 
-  if (!selectedCurriculum || curricula.length === 0) {
+  // When tag exists, skip curriculum loading check
+  if (!tag && (!selectedCurriculum || curriculaList.length === 0)) {
     return <div className="p-8 text-center">Loading curricula...</div>;
   }
 
+  // Handle back to tag navigation
+  const handleBackToTag = () => {
+    if (tag) {
+      router.push(`/glossary?tag=${tag}`);
+    }
+  };
+
+  // When tag exists, show only lesson content centered
+  if (tag) {
+    return (
+      <div className="px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 py-4 min-h-screen">
+        {/* Back Button - Top Right */}
+        <div className="flex justify-start mb-6">
+          <button
+            onClick={handleBackToTag}
+            className="text-sm font-medium flex items-center gap-2 text-primaryBlue capitalize"
+          >
+            <BackArrow color="#286cff" /> Back to {tag}
+          </button>
+        </div>
+
+        {/* Centered Lesson Content */}
+        <div className="flex justify-center">
+          <div className="space-y-6 max-w-2xl w-full">
+            <LessonContent
+              selectedLesson={urlSectionId || ""}
+              selectedCurriculum={urlSectionId || ""}
+              lessonLoading={lessonLoading}
+              lessonData={lessonData || null}
+              currentLesson={currentLesson || null}
+              videos={videos}
+              quizzes={quizzes as any}
+              resumePositionSec={resumePositionSec}
+              isCompleted={isCompleted}
+              activeProfileId={activeProfile?.id}
+              onProgress={maybeSendProgress}
+              onVideoEnd={handleVideoEnd}
+              onBack={handleBackToTag}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal mode (no tag) - show everything as before
   return (
     <div className="px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 py-4 max-w-screen-2xl mx-auto min-h-screen">
       {user?.data?.offerType === "Offer One" && (
@@ -185,31 +324,59 @@ function Library({ curriculumId, lessonId }: LibraryProps) {
         </div>
       )}
 
-      {/* Curriculum Selector Dropdown */}
-      <div className="mb-6 mt-8">
-        <select
-          value={selectedCurriculum}
-          onChange={(e) => {
-            const newCurriculumId = e.target.value;
-            setSelectedCurriculum(newCurriculumId);
-            setSelectedLesson(""); // Reset lesson when curriculum changes
-            router.push(`/library/${newCurriculumId}`);
-          }}
-          className="bg-white py-2 px-4 rounded-full font-medium focus:outline-none focus:ring-2 focus:ring-primaryBlue focus:border-transparent min-w-[200px] w-fit"
-        >
-          <option value="" className="text-textGray">
-            Select a Curriculum
-          </option>
-          {curricula.map((curriculum, idx) => (
-            <option
-              key={idx}
-              value={curriculum.id}
-              className="text-textGray w-fit"
-            >
-              {curriculum.title}
+      {/* Curriculum and Section Selectors */}
+      <div className="mb-6 mt-8 flex flex-col md:flex-row gap-4 items-start md:items-center">
+        {/* Curriculum Selector Dropdown - Disabled (uses profile's selectedCurriculumId) */}
+        <div className="w-full md:w-auto min-w-[200px]">
+          <Select value={selectedCurriculum} disabled={true}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a Curriculum" />
+            </SelectTrigger>
+            <SelectContent>
+              {curriculaList.length > 0 ? (
+                curriculaList.map((curriculum: any, index: number) => {
+                  const curriculumId = curriculum.id || `curriculum-${index}`;
+                  return (
+                    <SelectItem key={curriculumId} value={curriculumId}>
+                      {curriculum.title}
+                    </SelectItem>
+                  );
+                })
+              ) : (
+                <SelectItem value="no-curricula" disabled>
+                  No curricula available
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Section Selector Dropdown (opposite side) */}
+        <div className="w-full md:w-auto min-w-[200px] md:ml-auto">
+          <select
+            value={selectedSection || urlSectionId || ""}
+            onChange={(e) => {
+              const newSectionId = e.target.value;
+              setSelectedSection(newSectionId);
+              setSelectedLesson(""); // Reset lesson when section changes
+              router.push(`/library/${newSectionId}`);
+            }}
+            className="bg-white py-2 px-4 rounded-full font-medium focus:outline-none focus:ring-2 focus:ring-primaryBlue focus:border-transparent min-w-[200px] w-full md:w-fit"
+          >
+            <option value="" className="text-textGray">
+              Select a Section
             </option>
-          ))}
-        </select>
+            {sections.map((section: any, idx) => (
+              <option
+                key={idx}
+                value={section.id}
+                className="text-textGray w-fit"
+              >
+                {section.title}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex gap-6">
@@ -217,7 +384,7 @@ function Library({ curriculumId, lessonId }: LibraryProps) {
         <LessonList
           lessons={selectedCurriculumLessons}
           selectedLesson={selectedLesson}
-          selectedCurriculum={selectedCurriculum}
+          selectedCurriculum={selectedSection || urlSectionId || ""}
           onSelectLesson={handleSelectLesson}
         />
 
@@ -230,7 +397,7 @@ function Library({ curriculumId, lessonId }: LibraryProps) {
           <div className="space-y-6 max-w-2xl w-full">
             <LessonContent
               selectedLesson={selectedLesson}
-              selectedCurriculum={selectedCurriculum}
+              selectedCurriculum={selectedSection || urlSectionId || ""}
               lessonLoading={lessonLoading}
               lessonData={lessonData || null}
               currentLesson={currentLesson || null}
@@ -242,6 +409,7 @@ function Library({ curriculumId, lessonId }: LibraryProps) {
               onProgress={maybeSendProgress}
               onVideoEnd={handleVideoEnd}
               onBack={handleBackToLessons}
+              showTitleAndDescription={false}
             />
           </div>
         </div>

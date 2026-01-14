@@ -1,105 +1,164 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import profileIcon from "@/assets/profileIcon.svg";
 import { useSelectedProfile } from "@/hooks/use-selectedProfile";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import BackArrow from "@/assets/svgs/arrowback";
 import { useRouter } from "next/navigation";
 import { usePostCreateChat } from "@/lib/api/mutations";
 import { toast } from "react-toastify";
 import { TutorChangeRequestDialog } from "./tutor-change-request-dialog";
-import { useGetLibrary, useGetChildLessons } from "@/lib/api/queries";
+import {
+  useGetLibrary,
+  useGetChildLessons,
+  useGetCurricula,
+} from "@/lib/api/queries";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import LearningCard, { ProgressCard } from "./learningCard";
-import algebra from "@/assets/algebra.png";
-import measurement from "@/assets/measurement.png";
-import ratio from "@/assets/ratio.png";
-
-const availableImages = [algebra, measurement, ratio];
 
 function TuitionHome() {
-  const { activeProfile, changeProfile, isLoaded, profiles } =
-    useSelectedProfile();
+  const {
+    activeProfile,
+    changeProfile,
+    isLoaded,
+    profiles,
+    selectedCurriculumId: profileSelectedCurriculumId,
+    setSelectedCurriculumId: setProfileSelectedCurriculumId,
+  } = useSelectedProfile();
   const [showChangeRequestDialog, setShowChangeRequestDialog] = useState(false);
   const { push } = useRouter();
   const { mutateAsync: createChat } = usePostCreateChat();
 
   const { data: library } = useGetLibrary(activeProfile?.id || "");
 
-  // Get curricula from library data
-  const curricula = useMemo(() => {
+  // Get sections from library data (for Your Progress section only)
+  const sections = useMemo(() => {
     return library?.data || [];
   }, [library?.data]);
 
-  // Fetch lessons for the first 4 curricula
-  const { data: lessons1 } = useGetChildLessons(
-    activeProfile?.id || "",
-    curricula[0]?.id || ""
-  );
-  const { data: lessons2 } = useGetChildLessons(
-    activeProfile?.id || "",
-    curricula[1]?.id || ""
-  );
-  const { data: lessons3 } = useGetChildLessons(
-    activeProfile?.id || "",
-    curricula[2]?.id || ""
-  );
-  const { data: lessons4 } = useGetChildLessons(
-    activeProfile?.id || "",
-    curricula[3]?.id || ""
-  );
-
-  // Collect all lessons from the first 4 curricula
-  const allLessons = useMemo(() => {
-    const lessons: any[] = [];
-    [lessons1, lessons2, lessons3, lessons4].forEach((lessonData, index) => {
-      const curriculum = curricula[index];
-      if (lessonData?.data && curriculum) {
-        lessonData.data.forEach((lesson: any) => {
-          lessons.push({
-            ...lesson,
-            curriculumId: curriculum.id,
-            curriculumTitle: curriculum.title,
-            curriculumImage: availableImages[index % availableImages.length],
-          });
-        });
+  // Create a mapping from sectionId to section imageUrl
+  const sectionImageMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    sections.forEach((section: any) => {
+      if (section.id && section.imageUrl) {
+        map[section.id] = section.imageUrl;
       }
     });
+    return map;
+  }, [sections]);
+
+  // Fetch curricula by offerType
+  const { data: curriculaData } = useGetCurricula({
+    offerType: activeProfile?.offerType || "",
+  });
+
+  // Get curricula list for dropdown
+  const curriculaList = useMemo(() => {
+    return curriculaData?.curricula || [];
+  }, [curriculaData?.curricula]);
+
+  // Get default curriculum (first one)
+  const defaultCurriculumId = useMemo(() => {
+    if (curriculaList.length > 0) {
+      const firstCurriculum = curriculaList[0] as any;
+      return firstCurriculum.id || "";
+    }
+    return "";
+  }, [curriculaList]);
+
+  // Determine the actual selected curriculum ID
+  const selectedCurriculumId = useMemo(() => {
+    // If profile has a stored curriculum ID, use it
+    if (profileSelectedCurriculumId) {
+      return profileSelectedCurriculumId;
+    }
+    // Otherwise, use default (first curriculum)
+    return defaultCurriculumId;
+  }, [profileSelectedCurriculumId, defaultCurriculumId]);
+
+  // Update profile's selectedCurriculumId when default changes (if not already set)
+  useEffect(() => {
+    if (defaultCurriculumId && !profileSelectedCurriculumId) {
+      setProfileSelectedCurriculumId(defaultCurriculumId);
+    }
+  }, [
+    defaultCurriculumId,
+    profileSelectedCurriculumId,
+    setProfileSelectedCurriculumId,
+  ]);
+
+  // Fetch lessons for the selected curriculum
+  const { data: lessonsData } = useGetChildLessons(
+    activeProfile?.id || "",
+    selectedCurriculumId,
+    undefined // No sectionId needed
+  );
+
+  // Get selected curriculum details
+  const selectedCurriculum = useMemo(() => {
+    return curriculaList.find(
+      (curriculum: any) => curriculum.id === selectedCurriculumId
+    ) as any;
+  }, [curriculaList, selectedCurriculumId]);
+
+  // Collect lessons from the selected curriculum
+  const allLessons = useMemo(() => {
+    const lessons: any[] = [];
+    if (lessonsData?.data && selectedCurriculum) {
+      lessonsData.data.forEach((lesson: any) => {
+        // Get section image from library data based on lesson's sectionId
+        const sectionImageUrl = lesson.sectionId
+          ? sectionImageMap[lesson.sectionId]
+          : null;
+        lessons.push({
+          ...lesson,
+          curriculumId: selectedCurriculumId,
+          curriculumTitle: selectedCurriculum.title,
+          curriculumImageUrl: sectionImageUrl || selectedCurriculum.imageUrl,
+        });
+      });
+    }
     return lessons;
-  }, [lessons1, lessons2, lessons3, lessons4, curricula]);
+  }, [
+    lessonsData?.data,
+    selectedCurriculum,
+    selectedCurriculumId,
+    sectionImageMap,
+  ]);
 
-  // Transform library curricula to Course format
+  // Transform library sections to Course format, sorted by orderIndex
   const curriculaAsCourses = useMemo(() => {
-    return curricula.map((curriculum, index) => ({
-      image: availableImages[index % availableImages.length],
-      course: curriculum.title,
-      topics: [
-        {
-          title: "Start Learning",
-          number_of_quizzes: curriculum.progress.totalQuizzes,
-        },
-      ],
-      progress: curriculum.progress.completionPercentage,
-      duration: curriculum.durationWeeks * 7,
-      total_section: curriculum.lessonsCount,
-      completed_section: curriculum.progress.completedLessons,
-      curriculumId: curriculum.id,
-    }));
-  }, [curricula]);
-
-  // Separate lessons into in progress and not started
-  const inProgressLessons = useMemo(() => {
-    return allLessons.filter(
-      (lesson) =>
-        lesson.completionPercentage > 0 && lesson.completionPercentage < 100
-    );
-  }, [allLessons]);
-
-  const notStartedLessons = useMemo(() => {
-    return allLessons.filter((lesson) => lesson.completionPercentage === 0);
-  }, [allLessons]);
+    return sections
+      .slice()
+      .sort((a: any, b: any) => {
+        const orderA = a.orderIndex ?? 0;
+        const orderB = b.orderIndex ?? 0;
+        return orderA - orderB;
+      })
+      .map((section: any) => ({
+        imageUrl: section.imageUrl,
+        course: section.title,
+        topics: [
+          {
+            title: "Start Learning",
+            number_of_quizzes: section.progress?.totalQuizzes || 0,
+          },
+        ],
+        progress: section.progress?.completionPercentage || 0,
+        duration: 0, // Sections don't have durationWeeks
+        total_section: section.progress?.totalLessons || 0,
+        completed_section: section.progress?.completedLessons || 0,
+        curriculumId: section.id, // Using section.id as curriculumId
+      }));
+  }, [sections]);
 
   const handleMessage = async () => {
     if (
@@ -162,75 +221,62 @@ function TuitionHome() {
       <div className="my-8 flex flex-col md:flex-row gap-3 w-full min-h-[40vh]">
         {/* Lessons Panel */}
         <div className="md:w-3/5 border border-[#00000033] rounded-3xl bg-white p-6 max-h-[80vh] overflow-auto scrollbar-hide">
-          <h2 className="font-semibold text-base md:text-lg mb-4">
-            Your Lessons
-          </h2>
-          <Tabs defaultValue="inprogress" className="w-full">
-            <TabsList className="bg-transparent rounded-none border-b border-gray-300 p-1 w-full flex justify-start">
-              <TabsTrigger
-                value="inprogress"
-                className="data-[state=active]:text-primaryBlue data-[state=active]:border-b-2 data-[state=active]:border-primaryBlue text-sm py-2 px-0 text-black font-medium rounded-none !shadow-none !bg-transparent"
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <h2 className="font-semibold text-base md:text-lg">Your Lessons</h2>
+            <div className="w-full md:w-auto min-w-[200px]">
+              <Select
+                value={selectedCurriculumId}
+                onValueChange={(value) => {
+                  setProfileSelectedCurriculumId(value);
+                }}
               >
-                In Progress
-              </TabsTrigger>
-              <TabsTrigger
-                value="notstarted"
-                className="data-[state=active]:text-primaryBlue data-[state=active]:border-b-2 data-[state=active]:border-primaryBlue text-sm py-2 px-4 text-black font-medium rounded-none !shadow-none !bg-transparent"
-              >
-                Not Started
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="inprogress" className="space-y-3 mt-4">
-              {inProgressLessons.length ? (
-                inProgressLessons.map((lesson, idx) => (
-                  <LearningCard
-                    key={lesson.id || idx}
-                    course={{
-                      course: lesson.curriculumTitle,
-                      image: lesson.curriculumImage,
-                      topics: [],
-                      progress: lesson.completionPercentage,
-                      duration: 0,
-                      total_section: 0,
-                      completed_section: 0,
-                      curriculumId: lesson.curriculumId,
-                    }}
-                    lesson={lesson}
-                  />
-                ))
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  No lessons in progress.
-                </p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="notstarted" className="space-y-3 mt-4">
-              {notStartedLessons.length ? (
-                notStartedLessons.map((lesson, idx) => (
-                  <LearningCard
-                    key={lesson.id || idx}
-                    course={{
-                      course: lesson.curriculumTitle,
-                      image: lesson.curriculumImage,
-                      topics: [],
-                      progress: lesson.completionPercentage,
-                      duration: 0,
-                      total_section: 0,
-                      completed_section: 0,
-                      curriculumId: lesson.curriculumId,
-                    }}
-                    lesson={lesson}
-                  />
-                ))
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  All lessons have been started!
-                </p>
-              )}
-            </TabsContent>
-          </Tabs>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a curriculum..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {curriculaList.length > 0 ? (
+                    curriculaList.map((curriculum: any, index: number) => {
+                      const curriculumId =
+                        curriculum.id || `curriculum-${index}`;
+                      return (
+                        <SelectItem key={curriculumId} value={curriculumId}>
+                          {curriculum.title}
+                        </SelectItem>
+                      );
+                    })
+                  ) : (
+                    <SelectItem value="no-curricula" disabled>
+                      No curricula available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-3 mt-4">
+            {allLessons.length > 0 ? (
+              allLessons.map((lesson, idx) => (
+                <LearningCard
+                  key={lesson.id || idx}
+                  course={{
+                    course: lesson.curriculumTitle,
+                    imageUrl: lesson.curriculumImageUrl,
+                    topics: [],
+                    progress: lesson.completionPercentage,
+                    duration: 0,
+                    total_section: 0,
+                    completed_section: 0,
+                    curriculumId: lesson.curriculumId,
+                  }}
+                  lesson={lesson}
+                />
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No lessons available.
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Right Column */}
@@ -288,13 +334,15 @@ function TuitionHome() {
 
       {/* Progress Section */}
       <div className="my-8">
-        <h2 className="text-textGray font-medium text-base md:text-lg mb-2">
-          Your Progress
-        </h2>
-        <p className="text-xs text-textSubtitle mb-4">
-          Track your progress across all curricula
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div>
+          <h2 className="text-textGray font-medium text-base md:text-lg mb-2">
+            Your Progress
+          </h2>
+          <p className="text-xs text-textSubtitle">
+            Track your progress across all curricula
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-8">
           {curriculaAsCourses.length > 0 ? (
             curriculaAsCourses.map((course, index) => (
               <ProgressCard

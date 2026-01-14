@@ -3,9 +3,8 @@
 import { QuizPlayer } from "@/components/resourceManagemement/quiz/quiz-player";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { usePostAttemptQuiz, usePostStartHomework } from "@/lib/api/mutations";
 import { useGetQuiz } from "@/lib/api/queries";
 import { useState } from "react";
@@ -19,7 +18,7 @@ export default function TakeQuizPage() {
   const id = params.id as string;
   const isTestMode = searchParams.get("mode") === "test";
   const isHomework = searchParams.get("isHomework") === "true";
-
+  const router = useRouter();
   const finalQuizIdForFetch = isHomework ? null : id;
   const { data: quizResponse } = useGetQuiz(finalQuizIdForFetch || "");
   const quiz = quizResponse?.data;
@@ -93,21 +92,72 @@ export default function TakeQuizPage() {
 
   // If quiz hasn't been started, show the pre-quiz UI
   if (!quizStarted) {
+    // Format time limit: if 0, show as "Untimed"
+    const timeLimitDisplay =
+      timeLimit === 0 || !timeLimit
+        ? "Untimed (No time restriction)"
+        : `${timeLimit} minute${timeLimit !== 1 ? "s" : ""}`;
+
     return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4">
         <div className="max-w-3xl w-full mx-auto">
           <Card className="shadow-lg">
             <CardHeader className="text-center border-b pb-6">
-              <CardTitle className="text-3xl font-bold text-gray-900 mb-2">
-                Quiz
+              <CardTitle className="text-2xl font-semibold text-gray-900 mb-2">
+                {quiz?.title || "Quiz"}
               </CardTitle>
-              <p className="text-gray-600 mt-2">
-                Ready to test your knowledge?
-              </p>
             </CardHeader>
             <CardContent className="pt-6">
-              {/* General Information */}
+              {/* Quiz Details */}
               <div className="space-y-4 mb-8">
+                {/* Quiz Information Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {timeLimit !== undefined && (
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-1">
+                        Time Limit
+                      </h4>
+                      <p className="text-gray-700">{timeLimitDisplay}</p>
+                    </div>
+                  )}
+                  {quiz?.passingScore !== undefined && (
+                    <div className="p-4 bg-green-50 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-1">
+                        Passing Score
+                      </h4>
+                      <p className="text-gray-700">
+                        {typeof quiz.passingScore === "number"
+                          ? `${quiz.passingScore}%`
+                          : quiz.passingScore}
+                      </p>
+                    </div>
+                  )}
+                  {quiz?.questionsCount !== undefined && (
+                    <div className="p-4 bg-purple-50 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-1">
+                        Questions
+                      </h4>
+                      <p className="text-gray-700">
+                        {quiz.questionsCount} question
+                        {quiz.questionsCount !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quiz Description */}
+                {quiz?.description && (
+                  <div className="p-4 bg-yellow-50 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      Quiz Description
+                    </h3>
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {quiz.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* General Information */}
                 <div className="mt-6 p-4 bg-indigo-50 rounded-lg">
                   <h3 className="font-semibold text-gray-900 mb-2">
                     What to Expect
@@ -124,11 +174,13 @@ export default function TakeQuizPage() {
 
               {/* Action Buttons */}
               <div className="flex gap-4 justify-center">
-                <Button variant="outline" asChild className="min-w-[120px]">
-                  <Link href="/videos-quiz">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Go Back
-                  </Link>
+                <Button
+                  onClick={() => router.back()}
+                  variant="outline"
+                  className="min-w-[120px]"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Go Back
                 </Button>
                 <Button
                   onClick={handleStartQuiz}
