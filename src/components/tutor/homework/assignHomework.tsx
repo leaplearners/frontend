@@ -7,7 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { SearchIcon } from "lucide-react";
@@ -507,6 +507,7 @@ export default function AssignHomeworkForm({
                     selected={date}
                     onSelect={setDate}
                     initialFocus
+                    disabled={{ before: startOfDay(new Date()) }}
                   />
                 </PopoverContent>
               </Popover>

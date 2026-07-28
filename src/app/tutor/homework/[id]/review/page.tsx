@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { MathPreview } from "@/components/resourceManagemement/editor/math-preview";
+import { QuestionImage } from "@/components/ui/question-image";
 
 interface QuestionWithResults {
   id: string;
@@ -112,7 +113,10 @@ export default function TutorHomeworkReviewPage() {
           title: qq.question.title,
           content: qq.question.content,
           type: qq.question.type,
-          image_url: qq.question.image_url,
+          // Support both new (`image`) and legacy (`image_url`) formats
+          image: (qq.question as any).image || qq.question.image_url,
+          image_url: qq.question.image_url || (qq.question as any).image,
+          imageSettings: (qq.question as any).imageSettings,
           explanation: qq.question.explanation,
           metadata: qq.question.metadata,
           options:
@@ -403,18 +407,25 @@ export default function TutorHomeworkReviewPage() {
                   {/* Question Content */}
                   <div>
                     <p className="text-base font-medium mb-2">Question:</p>
-                    <p className="text-base whitespace-pre-wrap">
-                      {currentQ.question.content}
-                    </p>
-                    {currentQ.question.image_url && (
-                      <div className="mt-4">
-                        <img
-                          src={currentQ.question.image_url}
-                          alt="Question illustration"
-                          className="max-w-full h-auto rounded-lg border shadow-sm"
-                          style={{ maxHeight: "400px", objectFit: "contain" }}
-                        />
-                      </div>
+                    <MathPreview
+                      content={String(currentQ.question.content ?? "")}
+                      className="text-base text-textGray whitespace-pre-wrap"
+                      renderMarkdown={true}
+                    />
+                    {(currentQ.question.image || currentQ.question.image_url) && (
+                      <QuestionImage
+                        src={
+                          currentQ.question.image ||
+                          currentQ.question.image_url ||
+                          ""
+                        }
+                        alt="Question illustration"
+                        metadata={
+                          currentQ.question.imageSettings
+                            ? { image_settings: currentQ.question.imageSettings }
+                            : undefined
+                        }
+                      />
                     )}
                   </div>
 
@@ -459,14 +470,22 @@ export default function TutorHomeworkReviewPage() {
                                           )}
                                         >
                                           <div className="flex items-center gap-2">
-                                            <span className="font-medium">
-                                              {leftText} →
+                                            <span className="font-medium inline-flex items-center gap-1">
+                                              <MathPreview
+                                                content={String(leftText)}
+                                                renderMarkdown
+                                                className="font-medium"
+                                              />{" "}
+                                              →
                                             </span>
-                                            <span>{rightText}</span>
+                                            <MathPreview
+                                              content={String(rightText)}
+                                              renderMarkdown
+                                            />
                                             {isMatchCorrect ? (
-                                              <CheckCircle className="h-4 w-4 text-green-600 ml-auto" />
+                                              <CheckCircle className="h-4 w-4 text-green-600 ml-auto shrink-0" />
                                             ) : (
-                                              <XCircle className="h-4 w-4 text-red-600 ml-auto" />
+                                              <XCircle className="h-4 w-4 text-red-600 ml-auto shrink-0" />
                                             )}
                                           </div>
                                         </div>
@@ -532,10 +551,18 @@ export default function TutorHomeworkReviewPage() {
                             ).map(([left, right]) => (
                               <div
                                 key={left}
-                                className="p-2 bg-white rounded border border-green-200"
+                                className="p-2 bg-white rounded border border-green-200 flex items-center gap-1 flex-wrap"
                               >
-                                <span className="font-medium">{left}</span> →{" "}
-                                <span>{right}</span>
+                                <MathPreview
+                                  content={String(left)}
+                                  renderMarkdown
+                                  className="font-medium"
+                                />
+                                <span>→</span>
+                                <MathPreview
+                                  content={String(right)}
+                                  renderMarkdown
+                                />
                               </div>
                             ))}
                           </div>
@@ -606,9 +633,11 @@ export default function TutorHomeworkReviewPage() {
                       <Alert className="border-blue-200 bg-blue-50">
                         <AlertCircle className="h-4 w-4 text-blue-600" />
                         <AlertDescription>
-                          <p className="text-blue-800 whitespace-pre-wrap">
-                            {currentQ.question.explanation}
-                          </p>
+                          <MathPreview
+                            content={String(currentQ.question.explanation)}
+                            renderMarkdown
+                            className="text-blue-800 whitespace-pre-wrap"
+                          />
                         </AlertDescription>
                       </Alert>
                     </div>
