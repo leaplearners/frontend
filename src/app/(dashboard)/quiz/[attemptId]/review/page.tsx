@@ -22,7 +22,11 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { cn } from "@/lib/utils";
+import {
+  cn,
+  getCorrectAnswerText,
+  getQuizUserAnswerDisplayText,
+} from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { QuestionImage } from "@/components/ui/question-image";
 import { WatchLessonVideoButton } from "@/components/platform/library/watchLessonVideoButton";
@@ -160,80 +164,7 @@ export default function QuizAttemptReviewPage() {
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const getCorrectAnswerText = (question: any, result: QuizResult): string => {
-    // Some attempt payloads omit correctAnswers for unanswered questions.
-    // Fall back to the question payload where possible.
-    if (!Array.isArray(result.correctAnswers) || result.correctAnswers.length === 0) {
-      if (question.type === "matching_pairs") {
-        const pairs = Array.isArray((question as any).correctAnswer)
-          ? ((question as any).correctAnswer as any[])
-          : Array.isArray((question as any).pairs)
-            ? ((question as any).pairs as any[])
-            : [];
-        if (pairs.length > 0) {
-          return pairs
-            .map((p: any) => `${String(p.left)} → ${String(p.right)}`)
-            .join("\n");
-        }
-      }
-
-      if (
-        (question.type === "multiple_choice" || question.type === "true_false") &&
-        Array.isArray(question.options)
-      ) {
-        const correctOptions = question.options.filter((opt: any) => opt?.isCorrect);
-        if (correctOptions.length > 0) {
-          return correctOptions.map((o: any) => String(o.text ?? "")).join(" or ");
-        }
-        if (typeof (question as any).correctAnswer === "string") {
-          const opt = question.options.find(
-            (o: any) => o.id === (question as any).correctAnswer
-          );
-          if (opt?.text) return String(opt.text);
-        }
-      }
-
-      const possible = Array.isArray((question as any).correctAnswers)
-        ? ((question as any).correctAnswers as any[])
-        : [];
-      if (possible.length > 0) {
-        return possible.map((a: any) => String(a)).join(" or ");
-      }
-      if ((question as any).correctAnswer != null) {
-        return String((question as any).correctAnswer);
-      }
-
-      return "No correct answer";
-    }
-
-    if (
-      question.type === "matching_pairs" &&
-      typeof result.correctAnswers[0].content === "object"
-    ) {
-      const matches = result.correctAnswers[0].content as Record<
-        string,
-        string
-      >;
-      return Object.entries(matches)
-        .map(([left, right]) => `${left} → ${right}`)
-        .join("\n");
-    }
-
-    if (
-      (question.type === "multiple_choice" || question.type === "true_false") &&
-      question.options
-    ) {
-      const correctAnswer = result.correctAnswers[0];
-      const option = question.options.find(
-        (opt: any) => opt.id === correctAnswer.id
-      );
-      return option?.text || correctAnswer.content.toString();
-    }
-
-    return result.correctAnswers
-      .map((ans) => ans.content.toString())
-      .join(" or ");
-  };
+;
 
   const { totalEarned, totalPossible, computedPercentage } = useMemo(() => {
     const results = review?.results ?? [];
@@ -468,189 +399,184 @@ export default function QuizAttemptReviewPage() {
                     )}
                   </div>
 
-                  {/* User's Answer */}
-                  <div>
-                    <p className="text-base font-medium mb-2">Your Answer:</p>
-                    {(currentQ.question.type === "multiple_choice" ||
-                      currentQ.question.type === "true_false") &&
-                      currentQ.question.options &&
-                      currentQ.question.options.length > 0 ? (
-                      <div className="space-y-3">
-                        {!mcTfUserAnswered && (
+                                    {/* User's Answer */}
+                  {currentResult && (
+                    <div>
+                      <p className="text-base font-medium mb-2">Your Answer:</p>
+                      {(currentQ.question.type === "multiple_choice" ||
+                        currentQ.question.type === "true_false") &&
+                        currentQ.question.options &&
+                        currentQ.question.options.length > 0 ? (
+                        <div className="space-y-3">
+                          {!mcTfUserAnswered && (
+                            <Alert className="border-muted bg-muted/40">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertDescription>
+                                You did not answer this question.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                          {currentQ.question.options.map((option: any) => {
+                            const selectedId =
+                              currentResult.userAnswerId ||
+                              currentResult.userAnswerContent ||
+                              "";
+                            const isSelected =
+                              selectedId !== "" &&
+                              (selectedId === option.id ||
+                                String(option.text ?? "").trim().toLowerCase() ===
+                                String(selectedId).trim().toLowerCase());
+                            const isCorrectOption =
+                              (currentResult.correctAnswers?.some(
+                                (ans: any) => ans.id === option.id,
+                              ) ?? false) || option.isCorrect === true;
+
+                            return (
+                              <div
+                                key={option.id}
+                                className={cn(
+                                  "flex items-start gap-3 p-3 rounded-lg border-2",
+                                  isSelected && isCorrectOption
+                                    ? "bg-green-50 border-green-300"
+                                    : isSelected
+                                      ? "bg-red-50 border-red-300"
+                                      : "border-gray-200",
+                                )}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <MathPreview
+                                    content={String(option.text ?? "")}
+                                    className="text-base text-textGray whitespace-pre-wrap"
+                                    renderMarkdown={true}
+                                  />
+                                </div>
+                                {isSelected && isCorrectOption ? (
+                                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                ) : isSelected ? (
+                                  <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : currentQ.question.type === "matching_pairs" ? (
+                        currentResult.userAnswerContent ? (
+                          <div className="p-4 bg-gray-50 rounded-lg border">
+                            {(() => {
+                              try {
+                                const userMatches = JSON.parse(
+                                  currentResult.userAnswerContent as string,
+                                ) as Record<string, string>;
+                                const ca0 = currentResult.correctAnswers[0];
+                                const correctMatches =
+                                  ca0 && typeof ca0.content === "object"
+                                    ? (ca0.content as Record<string, string>)
+                                    : {};
+
+                                return (
+                                  <div className="space-y-2">
+                                    {Object.entries(userMatches).map(
+                                      ([leftText, rightText]) => {
+                                        const correctRightText =
+                                          correctMatches[leftText];
+                                        const isMatchCorrect =
+                                          correctRightText === rightText;
+
+                                        return (
+                                          <div
+                                            key={leftText}
+                                            className={cn(
+                                              "p-3 rounded-lg border-2",
+                                              isMatchCorrect
+                                                ? "bg-green-50 border-green-300"
+                                                : "bg-red-50 border-red-300",
+                                            )}
+                                          >
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <div className="flex-1 min-w-0 flex items-center gap-1 flex-wrap">
+                                                <MathPreview
+                                                  content={String(leftText)}
+                                                  renderMarkdown
+                                                  className="font-medium"
+                                                />
+                                                <span>→</span>
+                                                <MathPreview
+                                                  content={String(rightText)}
+                                                  renderMarkdown
+                                                />
+                                              </div>
+                                              {isMatchCorrect ? (
+                                                <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                                              ) : (
+                                                <XCircle className="h-4 w-4 text-red-600 shrink-0" />
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      },
+                                    )}
+                                  </div>
+                                );
+                              } catch {
+                                return (
+                                  <MathPreview
+                                    content={String(currentResult.userAnswerContent ?? "")}
+                                    renderMarkdown={true}
+                                    className="text-base text-textGray whitespace-pre-wrap"
+                                  />
+                                );
+                              }
+                            })()}
+                          </div>
+                        ) : (
                           <Alert className="border-muted bg-muted/40">
                             <AlertCircle className="h-4 w-4" />
                             <AlertDescription>
                               You did not answer this question.
                             </AlertDescription>
                           </Alert>
-                        )}
-                        {currentQ.question.options.map((option: any) => {
-                          const selectedId =
-                            currentResult.userAnswerId ||
-                            currentResult.userAnswerContent ||
-                            "";
-                          // Match by id first; fall back to text comparison for
-                          // content-based answer values (e.g. true/false text).
-                          const isSelected =
-                            selectedId !== "" &&
-                            (selectedId === option.id ||
-                              String(option.text ?? "").trim().toLowerCase() ===
-                              String(selectedId).trim().toLowerCase());
-                          const isCorrectOption =
-                            (currentResult.correctAnswers?.some(
-                              (ans: any) => ans.id === option.id,
-                            ) ?? false) || option.isCorrect === true;
-
-                          return (
-                            <div
-                              key={option.id}
-                              className={cn(
-                                "flex items-start gap-3 p-3 rounded-lg border-2",
-                                // Only colour the option the child actually selected.
-                                // The correct answer is surfaced separately below.
-                                isSelected && isCorrectOption
-                                  ? "bg-green-50 border-green-300"
-                                  : isSelected
-                                    ? "bg-red-50 border-red-300"
-                                    : "border-gray-200",
-                              )}
-                            >
-                              <div className="flex-1 min-w-0">
-                                <MathPreview
-                                  content={String(option.text ?? "")}
-                                  className="text-base text-textGray whitespace-pre-wrap"
-                                  renderMarkdown={true}
-                                />
-                              </div>
-                              {isSelected && isCorrectOption ? (
-                                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                              ) : isSelected ? (
-                                <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : currentQ.question.type === "matching_pairs" ? (
-                      currentResult.userAnswerContent ? (
-                        <div className="p-4 bg-gray-50 rounded-lg border">
-                          {(() => {
-                            try {
-                              const userMatches = JSON.parse(
-                                currentResult.userAnswerContent as string,
-                              ) as Record<string, string>;
-                              const ca0 = currentResult.correctAnswers[0];
-                              const correctMatches =
-                                ca0 && typeof ca0.content === "object"
-                                  ? (ca0.content as Record<string, string>)
-                                  : {};
-
-                              return (
-                                <div className="space-y-2">
-                                  {Object.entries(userMatches).map(
-                                    ([leftText, rightText]) => {
-                                      const correctRightText =
-                                        correctMatches[leftText];
-                                      const isMatchCorrect =
-                                        correctRightText === rightText;
-
-                                      return (
-                                        <div
-                                          key={leftText}
-                                          className={cn(
-                                            "p-3 rounded-lg border-2",
-                                            isMatchCorrect
-                                              ? "bg-green-50 border-green-300"
-                                              : "bg-red-50 border-red-300",
-                                          )}
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-medium">
-                                              {leftText} →
-                                            </span>
-                                            <span>{rightText}</span>
-                                            {isMatchCorrect ? (
-                                              <CheckCircle className="h-4 w-4 text-green-600 ml-auto" />
-                                            ) : (
-                                              <XCircle className="h-4 w-4 text-red-600 ml-auto" />
-                                            )}
-                                          </div>
-                                        </div>
-                                      );
-                                    },
-                                  )}
-                                </div>
-                              );
-                            } catch {
-                              return (
-                                <MathPreview
-                                  content={String(currentResult.userAnswerContent ?? "")}
-                                  renderMarkdown={true}
-                                  className="text-base text-textGray whitespace-pre-wrap"
-                                />
-                              );
-                            }
-                          })()}
-                        </div>
+                        )
                       ) : (
-                        <Alert className="border-muted bg-muted/40">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertDescription>
-                            You did not answer this question.
-                          </AlertDescription>
-                        </Alert>
-                      )
-                    ) : (
-                      <div
-                        className={cn(
-                          "p-4 rounded-lg border-2",
-                          currentResult.userAnswerContent != null &&
+                        <div
+                          className={cn(
+                            "p-4 rounded-lg border-2",
+                            currentResult.userAnswerContent != null &&
+                              String(currentResult.userAnswerContent).trim() !==
+                              ""
+                              ? currentResult.isCorrect
+                                ? "bg-green-50 border-green-300"
+                                : "bg-red-50 border-red-300"
+                              : "bg-muted/30 border-muted",
+                          )}
+                        >
+                          {currentResult.userAnswerContent != null &&
                             String(currentResult.userAnswerContent).trim() !==
-                            ""
-                            ? currentResult.isCorrect
-                              ? "bg-green-50 border-green-300"
-                              : "bg-red-50 border-red-300"
-                            : "bg-muted/30 border-muted",
-                        )}
-                      >
-                        {currentResult.userAnswerContent != null &&
-                          String(currentResult.userAnswerContent).trim() !==
-                          "" ? (
-                          <MathPreview
-                            content={String(
-                              currentQ.question.type === "multiple_choice" ||
-                                currentQ.question.type === "true_false"
-                                ? currentResult.userAnswerId ||
-                                  currentResult.userAnswerContent
-                                  ? currentQ.question.options?.find(
-                                    (opt: any) =>
-                                      opt.id ===
-                                      (currentResult.userAnswerId ||
-                                        currentResult.userAnswerContent),
-                                  )?.text ||
-                                  currentResult.userAnswerContent ||
-                                  ""
-                                  : ""
-                                : currentResult.userAnswerContent || "",
-                            )}
-                            className="text-base text-textGray whitespace-pre-wrap"
-                            renderMarkdown={true}
-                          />
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            You did not answer this question.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                            "" ? (
+                            <MathPreview
+                              content={getQuizUserAnswerDisplayText(
+                                currentQ.question,
+                                currentResult,
+                              )}
+                              className="text-base text-textGray whitespace-pre-wrap"
+                              renderMarkdown={true}
+                            />
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              You did not answer this question.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Correct Answer */}
-                  {(!currentResult.isCorrect ||
-                    currentQ.question.type === "free_text" ||
-                    currentQ.question.type === "short_answer" ||
-                    currentQ.question.type === "long_answer" ||
-                    currentQ.question.type === "coding") && (
+                  {currentResult &&
+                    (!currentResult.isCorrect ||
+                      currentQ.question.type === "free_text" ||
+                      currentQ.question.type === "short_answer" ||
+                      currentQ.question.type === "long_answer" ||
+                      currentQ.question.type === "coding") && (
                       <div>
                         <p className="text-base font-medium mb-2 text-green-700">
                           Correct Answer:
@@ -669,10 +595,18 @@ export default function QuizAttemptReviewPage() {
                               ).map(([left, right]) => (
                                 <div
                                   key={left}
-                                  className="p-2 bg-white rounded border border-green-200"
+                                  className="p-2 bg-white rounded border border-green-200 flex items-center gap-1 flex-wrap"
                                 >
-                                  <span className="font-medium">{left}</span> →{" "}
-                                  <span>{right}</span>
+                                  <MathPreview
+                                    content={String(left)}
+                                    renderMarkdown
+                                    className="font-medium"
+                                  />
+                                  <span>→</span>
+                                  <MathPreview
+                                    content={String(right)}
+                                    renderMarkdown
+                                  />
                                 </div>
                               ))}
                             </div>
@@ -680,10 +614,10 @@ export default function QuizAttemptReviewPage() {
                             <MathPreview
                               content={getCorrectAnswerText(
                                 currentQ.question,
-                                currentResult,
+                                currentResult as any,
                               )}
-                              className="text-base text-green-900 whitespace-pre-wrap"
                               renderMarkdown={true}
+                              className="text-base text-green-900 whitespace-pre-wrap"
                             />
                           )}
                         </div>
