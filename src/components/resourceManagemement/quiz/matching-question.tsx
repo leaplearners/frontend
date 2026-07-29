@@ -23,6 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { cn } from "@/lib/utils";
 import { GripVertical } from "lucide-react";
+import { MathPreview } from "../editor/math-preview";
 
 interface MatchingPair {
   id: string;
@@ -103,7 +104,11 @@ function DraggableItem({
     >
       <div className="flex items-center gap-2">
         {isDraggable && <GripVertical className="h-4 w-4 text-gray-400" />}
-        <p className="text-sm font-medium flex-1">{content}</p>
+        <MathPreview
+          content={String(content ?? "")}
+          renderMarkdown
+          className="text-sm font-medium flex-1"
+        />
       </div>
     </div>
   );
@@ -468,7 +473,11 @@ export function MatchingQuestion({
             >
               <div className="flex items-center gap-2">
                 <GripVertical className="h-4 w-4 text-gray-400" />
-                <p className="text-sm font-medium">{activeContent}</p>
+                <MathPreview
+                  content={String(activeContent ?? "")}
+                  renderMarkdown
+                  className="text-sm font-medium"
+                />
               </div>
             </div>
           ) : null}

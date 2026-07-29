@@ -1761,15 +1761,23 @@ export function QuizPlayer({
                                                 : "bg-red-50 border-red-300",
                                             )}
                                           >
-                                            <div className="flex items-center gap-2">
-                                              <span className="font-medium">
-                                                {leftText} →
-                                              </span>
-                                              <span>{rightText}</span>
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <div className="flex-1 min-w-0 flex items-center gap-1 flex-wrap">
+                                                <MathPreview
+                                                  content={String(leftText)}
+                                                  renderMarkdown
+                                                  className="font-medium"
+                                                />
+                                                <span>→</span>
+                                                <MathPreview
+                                                  content={String(rightText)}
+                                                  renderMarkdown
+                                                />
+                                              </div>
                                               {isMatchCorrect ? (
-                                                <CheckCircle className="h-4 w-4 text-green-600 ml-auto" />
+                                                <CheckCircle className="h-4 w-4 text-green-600 shrink-0 ml-auto" />
                                               ) : (
-                                                <XCircle className="h-4 w-4 text-red-600 ml-auto" />
+                                                <XCircle className="h-4 w-4 text-red-600 shrink-0 ml-auto" />
                                               )}
                                             </div>
                                           </div>
@@ -1854,16 +1862,52 @@ export function QuizPlayer({
                               ).map(([left, right]) => (
                                 <div
                                   key={left}
-                                  className="p-2 bg-white rounded border border-green-200"
+                                  className="p-2 bg-white rounded border border-green-200 flex items-center gap-1 flex-wrap"
                                 >
-                                  <span className="font-medium">{left}</span> →{" "}
-                                  <span>{right}</span>
+                                  <MathPreview
+                                    content={String(left)}
+                                    renderMarkdown
+                                    className="font-medium"
+                                  />
+                                  <span>→</span>
+                                  <MathPreview
+                                    content={String(right)}
+                                    renderMarkdown
+                                  />
                                 </div>
                               ))}
                             </div>
                           ) : (
+                            currentQ.question.type === "free_text" ||
+                            currentQ.question.type === "short_answer" ||
+                            currentQ.question.type === "long_answer" ||
+                            currentQ.question.type === "coding"
+                          ) &&
+                            Array.isArray(reviewQuestionResult.correctAnswers) &&
+                            reviewQuestionResult.correctAnswers.length > 0 ? (
+                            <div className="space-y-2">
+                              {reviewQuestionResult.correctAnswers.map(
+                                (ans, index) => (
+                                  <MathPreview
+                                    key={ans.id ?? index}
+                                    content={String(
+                                      typeof ans.content === "object" &&
+                                        ans.content !== null
+                                        ? ""
+                                        : (ans.content ?? ""),
+                                    )}
+                                    renderMarkdown={true}
+                                    className="text-base text-green-900 whitespace-pre-wrap"
+                                  />
+                                ),
+                              )}
+                            </div>
+                          ) : (
                             <MathPreview
-                              content={getCorrectAnswerText(currentQ, reviewQuestionResult)}
+                              content={getCorrectAnswerText(
+                                currentQ,
+                                reviewQuestionResult,
+                              )}
                               renderMarkdown={true}
                               className="text-base text-green-900 whitespace-pre-wrap"
                             />
@@ -2456,14 +2500,45 @@ export function QuizPlayer({
                                     ).map(([left, right]) => (
                                       <div
                                         key={left}
-                                        className="p-2 bg-white rounded border border-green-200"
+                                        className="p-2 bg-white rounded border border-green-200 flex items-center gap-1 flex-wrap"
                                       >
-                                        <span className="font-medium">
-                                          {left}
-                                        </span>{" "}
-                                        → <span>{right}</span>
+                                        <MathPreview
+                                          content={String(left)}
+                                          renderMarkdown
+                                          className="font-medium"
+                                        />
+                                        <span>→</span>
+                                        <MathPreview
+                                          content={String(right)}
+                                          renderMarkdown
+                                        />
                                       </div>
                                     ))}
+                                  </div>
+                                ) : (
+                                  currentQ.question.type === "free_text" ||
+                                  currentQ.question.type === "short_answer" ||
+                                  currentQ.question.type === "long_answer" ||
+                                  currentQ.question.type === "coding"
+                                ) &&
+                                  Array.isArray(currentResult.correctAnswers) &&
+                                  currentResult.correctAnswers.length > 0 ? (
+                                  <div className="space-y-2">
+                                    {currentResult.correctAnswers.map(
+                                      (ans: any, index: number) => (
+                                        <MathPreview
+                                          key={ans.id ?? index}
+                                          content={String(
+                                            typeof ans.content === "object" &&
+                                              ans.content !== null
+                                              ? ""
+                                              : (ans.content ?? ""),
+                                          )}
+                                          renderMarkdown={true}
+                                          className="text-sm text-green-900 whitespace-pre-wrap"
+                                        />
+                                      ),
+                                    )}
                                   </div>
                                 ) : (
                                   <MathPreview

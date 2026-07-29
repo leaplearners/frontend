@@ -11,6 +11,113 @@ interface MathPreviewProps {
   katexOptions?: katex.KatexOptions;
 }
 
+type MathToken = {
+  placeholder: string;
+  html: string;
+};
+
+/**
+ * Correct answers are often stored as bare TeX (e.g. `\frac{1}{2}`) without
+ * `$...$` delimiters. Feedback/prose usually already includes delimiters.
+ * Wrap only when the string (or ` or `-separated parts) looks like a pure
+ * expression — not English sentences that happen to contain a command.
+ */
+function isBareLatexExpression(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (/\$|\\\(|\\\[/.test(trimmed)) return false;
+  if (!/\\[a-zA-Z]+/.test(trimmed)) return false;
+
+  const leftover = trimmed
+    .replace(/\\[a-zA-Z]+\*?/g, "")
+    .replace(/[{}]/g, " ")
+    .replace(/[0-9+\-*/^=_(),.[\]\s\\]/g, "")
+    .trim();
+
+  // Leftover letter runs ⇒ prose, not a pure math expression
+  if (/[a-zA-Z]{3,}/.test(leftover)) return false;
+  return true;
+}
+
+function wrapBareLatexExpressions(content: string): string {
+  // Split joined correct answers: "\frac{1}{2} or \frac{2}{4}"
+  return content
+    .split(/(\s+or\s+)/i)
+    .map((part) => {
+      if (/^\s+or\s+$/i.test(part)) return part;
+      if (!isBareLatexExpression(part)) return part;
+      const trimmed = part.trim();
+      return part.replace(trimmed, `$${trimmed}$`);
+    })
+    .join("");
+}
+
+/**
+ * Extract math segments first so markdown (e.g. *italic*) cannot corrupt
+ * LaTeX that contains asterisks or other markdown-significant characters.
+ * Supports $...$, $$...$$, \(...\), and \[...\].
+ */
+function extractAndRenderMath(
+  content: string,
+  renderLatexToHtml: (math: string, displayMode: boolean) => string,
+): { text: string; tokens: MathToken[] } {
+  const tokens: MathToken[] = [];
+  let text = content;
+  let tokenIndex = 0;
+
+  const stash = (math: string, displayMode: boolean) => {
+    const placeholder = `\u0000MATH${tokenIndex++}\u0000`;
+    tokens.push({
+      placeholder,
+      html: displayMode
+        ? `<div class="my-4" data-testid="math-block">${renderLatexToHtml(math, true)}</div>`
+        : `<span data-testid="math-inline">${renderLatexToHtml(math, false)}</span>`,
+    });
+    return placeholder;
+  };
+
+  // Block math first ($$...$$ and \[...\])
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, math: string) =>
+    stash(math, true),
+  );
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, math: string) =>
+    stash(math, true),
+  );
+
+  // Inline math ($...$ and \(...\)) — avoid matching lone $ that start $$
+  text = text.replace(/(?<!\$)\$(?!\$)([^$\n]+?)\$(?!\$)/g, (_, math: string) =>
+    stash(math, false),
+  );
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, (_, math: string) =>
+    stash(math, false),
+  );
+
+  return { text, tokens };
+}
+
+function applyMarkdown(text: string): string {
+  let processed = text;
+  processed = processed.replace(/^# (.+)$/gm, "<h1>$1</h1>");
+  processed = processed.replace(/^## (.+)$/gm, "<h2>$1</h2>");
+  processed = processed.replace(
+    /\*\*(.+?)\*\*/g,
+    '<strong class="font-bold">$1</strong>',
+  );
+  processed = processed.replace(
+    /(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g,
+    "<em>$1</em>",
+  );
+  return processed;
+}
+
+function restoreMathTokens(text: string, tokens: MathToken[]): string {
+  let result = text;
+  for (const token of tokens) {
+    result = result.split(token.placeholder).join(token.html);
+  }
+  return result;
+}
+
 export function MathPreview({
   content,
   className = "",
@@ -20,7 +127,6 @@ export function MathPreview({
   const renderedContent = useMemo(() => {
     if (!content) return null;
 
-    // Function to render LaTeX
     const renderLatexToHtml = (math: string, displayMode: boolean) => {
       try {
         return katex.renderToString(math, {
@@ -33,94 +139,31 @@ export function MathPreview({
       }
     };
 
-    // First handle escaped dollar signs by temporarily replacing them
+    // Preserve escaped dollars as literal $
     let processedContent = content.replace(
       /\\\$/g,
-      "\u0000ESCAPED_DOLLAR\u0000"
+      "\u0000ESCAPED_DOLLAR\u0000",
     );
 
-    // If renderMarkdown is true, process markdown first (before math)
+    // Bare TeX answers like `\frac{1}{2}` → `$\frac{1}{2}$` so KaTeX runs
+    processedContent = wrapBareLatexExpressions(processedContent);
+
+    const { text, tokens } = extractAndRenderMath(
+      processedContent,
+      renderLatexToHtml,
+    );
+
+    let htmlContent = renderMarkdown ? applyMarkdown(text) : text;
+    htmlContent = restoreMathTokens(htmlContent, tokens);
+    htmlContent = htmlContent.replace(/\u0000ESCAPED_DOLLAR\u0000/g, "$");
+
     if (renderMarkdown) {
-      // Process headings
-      processedContent = processedContent.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-      processedContent = processedContent.replace(/^## (.+)$/gm, "<h2>$1</h2>");
-
-      // Process bold (but not within math expressions)
-      processedContent = processedContent.replace(
-        /\*\*(.+?)\*\*/g,
-        '<strong class="font-bold">$1</strong>'
-      );
-
-      // Process italic (but not within math expressions)
-      processedContent = processedContent.replace(
-        /(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g,
-        "<em>$1</em>"
-      );
-    }
-
-    // Parse content for LaTeX expressions
-    // Use a more complex approach to handle consecutive delimiters correctly
-    let htmlContent = "";
-    let remaining = processedContent;
-
-    while (remaining.length > 0) {
-      // Try to match block math first
-      const blockMatch = remaining.match(/^\$\$([\s\S]*?)\$\$/);
-      if (blockMatch && blockMatch[1] !== undefined) {
-        const mathContent = blockMatch[1].replace(
-          /\u0000ESCAPED_DOLLAR\u0000/g,
-          "\\$"
-        );
-        const rendered = renderLatexToHtml(mathContent, true);
-        htmlContent += `<div class="my-4" data-testid="math-block">${rendered}</div>`;
-        remaining = remaining.slice(blockMatch[0].length);
-        continue;
-      }
-
-      // Try to match inline math
-      const inlineMatch = remaining.match(/^\$([^$]+?)\$/);
-      if (inlineMatch && inlineMatch[1] !== undefined) {
-        // Check if this is actually part of a block math ($$)
-        if (
-          remaining.length > inlineMatch[0].length &&
-          remaining[inlineMatch[0].length] === "$"
-        ) {
-          // This is the start of $$, not inline math
-          htmlContent += remaining[0];
-          remaining = remaining.slice(1);
-          continue;
-        }
-
-        const mathContent = inlineMatch[1].replace(
-          /\u0000ESCAPED_DOLLAR\u0000/g,
-          "\\$"
-        );
-        const rendered = renderLatexToHtml(mathContent, false);
-        htmlContent += `<span data-testid="math-inline">${rendered}</span>`;
-        remaining = remaining.slice(inlineMatch[0].length);
-        continue;
-      }
-
-      // No math found, take one character
-      htmlContent += remaining[0];
-      remaining = remaining.slice(1);
-    }
-
-    // Restore escaped dollar signs (keep the backslash for display)
-    htmlContent = htmlContent.replace(/\u0000ESCAPED_DOLLAR\u0000/g, "\\$");
-
-    // If renderMarkdown, handle line breaks and wrap paragraphs
-    if (renderMarkdown) {
-      // First convert single newlines to <br> tags (but preserve double newlines for paragraphs)
       htmlContent = htmlContent.replace(/(?<!\n)\n(?!\n)/g, "<br>");
-
-      // Then split on double newlines for paragraph breaks
       const lines = htmlContent.split("\n\n");
       htmlContent = lines
         .map((line) => {
           line = line.trim();
           if (!line) return "";
-          // Don't wrap if already wrapped in HTML tags
           if (line.startsWith("<h") || line.startsWith("<div")) {
             return line;
           }

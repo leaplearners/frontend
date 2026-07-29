@@ -443,9 +443,13 @@ export default function BaselineReviewPage() {
                             String(currentResult.userAnswerContent).trim() !==
                             "" ? (
                             <MathPreview
-                              content={getQuizUserAnswerDisplayText(
-                                currentQ.question,
-                                currentResult,
+                              content={String(
+                                getQuizUserAnswerDisplayText(
+                                  currentQ.question,
+                                  currentResult,
+                                ) ||
+                                  currentResult.userAnswerContent ||
+                                  "",
                               )}
                               className="text-base text-textGray whitespace-pre-wrap"
                               renderMarkdown={true}
@@ -499,6 +503,31 @@ export default function BaselineReviewPage() {
                                   />
                                 </div>
                               ))}
+                            </div>
+                          ) : (
+                            currentQ.question.type === "free_text" ||
+                            currentQ.question.type === "short_answer" ||
+                            currentQ.question.type === "long_answer" ||
+                            currentQ.question.type === "coding"
+                          ) &&
+                            Array.isArray(currentResult.correctAnswers) &&
+                            currentResult.correctAnswers.length > 0 ? (
+                            <div className="space-y-2">
+                              {currentResult.correctAnswers.map(
+                                (ans: any, index: number) => (
+                                  <MathPreview
+                                    key={ans.id ?? index}
+                                    content={String(
+                                      typeof ans.content === "object" &&
+                                        ans.content !== null
+                                        ? ""
+                                        : (ans.content ?? ""),
+                                    )}
+                                    renderMarkdown={true}
+                                    className="text-base text-green-900 whitespace-pre-wrap"
+                                  />
+                                ),
+                              )}
                             </div>
                           ) : (
                             <MathPreview
