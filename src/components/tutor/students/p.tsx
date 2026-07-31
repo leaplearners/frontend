@@ -24,7 +24,7 @@ function classNames(...classes: string[]) {
 export default function TutorStudentPage() {
   const [search, setSearch] = useState("");
   const [year, setYear] = useState("All");
-  const [subscription, setSubscription] = useState("All");
+  const [subscription, setSubscription] = useState("Guided Learning");
   const { push } = useRouter();
   const { data: tutorData } = useGetCurrentUser();
   const [tutorId, setTutorId] = useState("");
@@ -39,6 +39,12 @@ export default function TutorStudentPage() {
   // Extract students from API response - the API returns ChildProfile[] directly
   const students: ChildProfile[] = studentsData || [];
 
+  const offerTypeLabel = (offerType: ChildProfile["offerType"]) => {
+    if (offerType === "tuition") return "Guided Learning";
+    if (offerType === "platform") return "Platform";
+    return "No Plan";
+  };
+
   // Generate filter options from actual data
   const years = [
     "All",
@@ -47,12 +53,16 @@ export default function TutorStudentPage() {
 
   const subscriptions = [
     "All",
+    "Guided Learning",
     ...Array.from(
       new Set(
-        students.map((s: ChildProfile) =>
-          s.offerType === "platform" ? "Platform" : s.offerType === "tuition" ? "Tuition" : "No Plan"
-        )
-      )
+        students
+          .map((s: ChildProfile) => offerTypeLabel(s.offerType))
+          // Platform is not a filter option; Guided Learning is always included above
+          .filter(
+            (label) => label !== "Platform" && label !== "Guided Learning",
+          ),
+      ),
     ),
   ];
 
@@ -64,8 +74,7 @@ export default function TutorStudentPage() {
         .toLowerCase()
         .includes(search.toLowerCase());
       const matchesYear = year === "All" || `Year ${profile.year}` === year;
-      const profileSubscription =
-        profile.offerType === "platform" ? "Platform" : profile.offerType === "tuition" ? "Tuition" : "No Plan";
+      const profileSubscription = offerTypeLabel(profile.offerType);
       const matchesSubscription =
         subscription === "All" || profileSubscription === subscription;
       return matchesSearch && matchesYear && matchesSubscription;
@@ -194,7 +203,7 @@ export default function TutorStudentPage() {
               </div>
               {/* Subscription */}
               <div className="mt-1 text-xs text-gray-500">
-                {profile.offerType === "platform" ? "Platform" : profile.offerType === "tuition" ? "Tuition" : "No Plan"}
+                {offerTypeLabel(profile.offerType)}
               </div>
             </div>
           </div>

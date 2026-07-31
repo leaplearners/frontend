@@ -257,15 +257,27 @@ export default function StudentPage({ id }: { id: string }) {
     return [...rows].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
   }, [schemeOfWork]);
 
-  // Progress snapshot — derived from scheme of work (inLearningPath items only)
+  // Progress snapshot — totals are across all year-group quizzes in the scheme.
+  // Baseline-excluded items have inLearningPath=false; tutor skips use status "skipped".
   const snapshot = useMemo(() => {
-    const inPath = schemeOfWork.filter((s) => s.inLearningPath);
+    const all = schemeOfWork as SchemeOfWork[];
+    const inPath = all.filter((s) => s.inLearningPath);
+    const passed = inPath.filter((s) => s.status === "completed").length;
+    const forcedComplete = inPath.filter(
+      (s) => s.status === "max_failed",
+    ).length;
+    // Baseline skips (!inLearningPath) + tutor skips (status skipped)
+    const skipped = all.filter(
+      (s) => !s.inLearningPath || String(s.status).toLowerCase() === "skipped",
+    ).length;
+    const total = all.length;
+    const remaining = Math.max(0, total - (passed + skipped + forcedComplete));
     return {
-      total: inPath.length,
-      passed: inPath.filter((s) => s.status === "completed").length,
-      skipped: inPath.filter((s) => s.status === "skipped").length,
-      remaining: inPath.filter((s) => s.status === "queue").length,
-      forcedComplete: inPath.filter((s) => s.status === "max_failed").length,
+      total,
+      passed,
+      skipped,
+      remaining,
+      forcedComplete,
     };
   }, [schemeOfWork]);
 
