@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Clock, Edit, Hash } from "lucide-react";
 import Link from "next/link";
 import { QuestionPreview } from "@/components/resourceManagemement/questions";
+import { MathPreview } from "@/components/resourceManagemement/editor";
 
 // Force dynamic rendering since this page uses authentication
 export const dynamic = "force-dynamic";
@@ -118,10 +119,12 @@ export default function QuestionDetailPage({
     }
   } else if (question.type === "free_text") {
     // Free text questions may have multiple accepted answers
-    questionData.acceptedAnswers = answers.map((a: any) => ({
-      content: a.content,
-      gradingCriteria: a.gradingCriteria,
-    }));
+    questionData.acceptedAnswers = answers
+      .filter((a: any) => a.isCorrect !== false)
+      .map((a: any) => ({
+        content: a.content,
+        grading_criteria: a.grading_criteria ?? a.gradingCriteria,
+      }));
   } else if (question.type === "matching" && question.metadata) {
     // Legacy matching questions store pairs in metadata
     const metadata = question.metadata as any;
@@ -150,7 +153,11 @@ export default function QuestionDetailPage({
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <CardTitle className="text-2xl">{question.content}</CardTitle>
+              <CardTitle className="text-2xl">
+                <MathPreview
+                  content={question.content}
+                />
+              </CardTitle>
               <CardDescription>
                 Created on {new Date(question.createdAt).toLocaleDateString()}
               </CardDescription>
@@ -186,11 +193,10 @@ export default function QuestionDetailPage({
                   Array.from({ length: 5 }).map((_, i) => (
                     <div
                       key={i}
-                      className={`h-2 w-2 rounded-full ${
-                        i < question.difficultyLevel!
+                      className={`h-2 w-2 rounded-full ${i < question.difficultyLevel!
                           ? "bg-primaryBlue"
                           : "bg-muted"
-                      }`}
+                        }`}
                     />
                   ))
                 ) : (

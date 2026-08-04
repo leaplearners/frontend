@@ -13,13 +13,21 @@ interface FreeTextEditorProps {
   onChange: (data: Partial<FreeTextQuestion>) => void;
 }
 
+function mapAcceptedAnswers(
+  answers: Array<{ content?: string | null; grading_criteria?: string | null; gradingCriteria?: string | null }> | undefined,
+) {
+  if (!answers?.length) return [{ content: "" }];
+  return answers.map((ans) => ({
+    content: ans.content || "",
+    grading_criteria:
+      ans.grading_criteria ?? (ans as any).gradingCriteria ?? undefined,
+  }));
+}
+
 export function FreeTextEditor({ question, onChange }: FreeTextEditorProps) {
-  const [acceptedAnswers, setAcceptedAnswers] = useState<Array<{ content: string; grading_criteria?: string }>>(
-    question?.acceptedAnswers?.map(ans => ({
-      content: ans.content || '',
-      grading_criteria: ans.grading_criteria
-    })) || [{ content: '' }]
-  );
+  const [acceptedAnswers, setAcceptedAnswers] = useState<
+    Array<{ content: string; grading_criteria?: string }>
+  >(() => mapAcceptedAnswers(question?.acceptedAnswers));
 
   const handleAddAnswer = () => {
     const newAnswers = [...acceptedAnswers, { content: '' }];

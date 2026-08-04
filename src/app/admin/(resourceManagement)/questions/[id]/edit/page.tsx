@@ -25,6 +25,7 @@ import {
 import {
   MultipleChoiceEditor,
   TrueFalseEditor,
+  FreeTextEditor,
 } from "@/components/resourceManagemement/questions";
 import { MatchingPairsEditor } from "@/components/resourceManagemement/questions/matching-pairs-editor";
 import { useGetQuestionById } from "@/lib/api/queries";
@@ -131,9 +132,18 @@ export default function EditQuestionPage({
         explanation: a.explanation,
         orderIndex: a.orderIndex,
       }));
-    } else if (question.type === "free_text" && answers.length > 0) {
-      // Free text questions might have sample answers
-      questionData.sampleAnswer = answers[0]?.content || "";
+    } else if (question.type === "free_text") {
+      // API returns accepted answers in `answers` (same as other types)
+      questionData.acceptedAnswers =
+        answers.length > 0
+          ? answers
+              .filter((a: any) => a.isCorrect !== false)
+              .map((a: any) => ({
+                content: a.content || "",
+                grading_criteria:
+                  a.grading_criteria ?? a.gradingCriteria ?? undefined,
+              }))
+          : [{ content: "" }];
     } else if (question.type === "matching" && question.metadata) {
       // Matching questions would have pairs in metadata
       const metadata = question.metadata as any;
@@ -210,10 +220,13 @@ export default function EditQuestionPage({
         formDataToSend.append(
           "acceptedAnswers",
           JSON.stringify(
-            (formData.acceptedAnswers || []).map((answer: any) => ({
-              content: answer.content || "",
-              gradingCriteria: answer.gradingCriteria || "",
-            }))
+            (formData.acceptedAnswers || [])
+              .filter((answer: any) => String(answer.content || "").trim())
+              .map((answer: any) => ({
+                content: answer.content || "",
+                gradingCriteria:
+                  answer.gradingCriteria || answer.grading_criteria || "",
+              }))
           )
         );
       } else if (formData.type === "matching_pairs") {
@@ -598,10 +611,12 @@ export default function EditQuestionPage({
               />
             )}
             {formData.type === "free_text" && (
-              <div className="text-muted-foreground">
-                Free text questions don't require answer configuration. Students
-                will provide their own answers.
-              </div>
+              <FreeTextEditor
+                question={formData}
+                onChange={(data) =>
+                  setFormData((prev: any) => ({ ...prev, ...data }))
+                }
+              />
             )}
             {formData.type === "matching" && (
               <div className="text-muted-foreground">

@@ -30,6 +30,24 @@ interface QuestionPreviewProps {
   onAnswer?: (answer: any) => void;
 }
 
+
+function resolveAcceptedAnswers(question: Partial<Question>): any[] {
+  const accepted = (question as any).acceptedAnswers;
+  if (Array.isArray(accepted) && accepted.length > 0) {
+    return accepted;
+  }
+  const answers = (question as any).answers;
+  if (Array.isArray(answers) && answers.length > 0) {
+    return answers
+      .filter((a: any) => a?.isCorrect !== false)
+      .map((a: any) => ({
+        content: a.content,
+        grading_criteria: a.grading_criteria ?? a.gradingCriteria,
+      }));
+  }
+  return [];
+}
+
 export function QuestionPreview({
   question,
   showAnswers = true,
@@ -43,6 +61,8 @@ export function QuestionPreview({
   const [matchingAnswers, setMatchingAnswers] = useState<
     Record<string, string>
   >({});
+
+  const acceptedAnswers = resolveAcceptedAnswers(question);
 
   const handleSubmit = () => {
     if (onAnswer) {
@@ -295,7 +315,7 @@ export function QuestionPreview({
                 placeholder="Enter your answer here..."
                 rows={3}
               />
-              {showAnswers && (question as any).acceptedAnswers && (
+              {showAnswers && acceptedAnswers.length > 0 && (
                 <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle className="h-5 w-5 text-green-600" />
@@ -304,7 +324,7 @@ export function QuestionPreview({
                     </h4>
                   </div>
                   <div className="space-y-2">
-                    {(question as any).acceptedAnswers.map(
+                    {acceptedAnswers.map(
                       (answer: any, index: number) => (
                         <div
                           key={index}
@@ -317,9 +337,9 @@ export function QuestionPreview({
                               renderMarkdown={true}
                               className="inline font-medium"
                             />
-                            {answer.grading_criteria && (
+                            {(answer.grading_criteria || answer.gradingCriteria) && (
                               <div className="text-muted-foreground text-xs mt-1">
-                                Criteria: {answer.grading_criteria}
+                                Criteria: {answer.grading_criteria || answer.gradingCriteria}
                               </div>
                             )}
                           </div>
@@ -385,7 +405,7 @@ export function QuestionPreview({
                 placeholder="Enter your answer here..."
                 rows={5}
               />
-              {showAnswers && (question as any).acceptedAnswers && (
+              {showAnswers && acceptedAnswers.length > 0 && (
                 <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle className="h-5 w-5 text-green-600" />
@@ -394,7 +414,7 @@ export function QuestionPreview({
                     </h4>
                   </div>
                   <div className="space-y-2">
-                    {(question as any).acceptedAnswers.map(
+                    {acceptedAnswers.map(
                       (answer: any, index: number) => (
                         <div
                           key={index}
@@ -407,9 +427,9 @@ export function QuestionPreview({
                               renderMarkdown={true}
                               className="inline font-medium"
                             />
-                            {answer.grading_criteria && (
+                            {(answer.grading_criteria || answer.gradingCriteria) && (
                               <div className="text-muted-foreground text-xs mt-1">
-                                Criteria: {answer.grading_criteria}
+                                Criteria: {answer.grading_criteria || answer.gradingCriteria}
                               </div>
                             )}
                           </div>
