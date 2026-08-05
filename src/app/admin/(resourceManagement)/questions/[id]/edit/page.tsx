@@ -127,6 +127,7 @@ export default function EditQuestionPage({
     // Transform answers based on question type
     if (question.type === "multiple_choice" || question.type === "true_false") {
       questionData.answers = answers.map((a: any) => ({
+        id: a.id,
         content: a.content,
         isCorrect: a.isCorrect,
         explanation: a.explanation,
@@ -207,14 +208,26 @@ export default function EditQuestionPage({
         formDataToSend.append(
           "answers",
           JSON.stringify(
-            (formData.answers || []).map((answer: any, index: number) => ({
-              content: answer.content || "",
-              isCorrect: answer.isCorrect || false,
-              explanation: answer.explanation || "",
-              orderIndex:
-                answer.orderIndex !== undefined ? answer.orderIndex : index,
-            }))
-          )
+            (formData.answers || []).map((answer: any, index: number) => {
+              const payload: Record<string, unknown> = {
+                content: answer.content || "",
+                isCorrect: answer.isCorrect || false,
+                explanation: answer.explanation || "",
+                orderIndex: index,
+              };
+              // Only send real persisted answer IDs (UUIDs). New options have
+              // temporary client ids and must be created without an id.
+              const id = typeof answer.id === "string" ? answer.id : "";
+              if (
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                  id,
+                )
+              ) {
+                payload.id = id;
+              }
+              return payload;
+            }),
+          ),
         );
       } else if (formData.type === "free_text") {
         formDataToSend.append(
@@ -586,7 +599,7 @@ export default function EditQuestionPage({
                   type: "multiple_choice",
                   options:
                     formData.answers?.map((ans: any, index: number) => ({
-                      id: ans.id || String(index + 1),
+                      id: ans.id || `new-${index}`,
                       content: ans.content || "",
                       isCorrect: ans.isCorrect || false,
                     })) || [],
@@ -594,9 +607,14 @@ export default function EditQuestionPage({
                 onChange={(value) =>
                   setFormData((prev: any) => ({
                     ...prev,
-                    answers: value.options.map((opt) => ({
+                    answers: value.options.map((opt, index) => ({
+                      id: opt.id,
                       content: opt.content,
                       isCorrect: opt.isCorrect,
+                      explanation:
+                        prev.answers?.find((a: any) => a.id === opt.id)
+                          ?.explanation || "",
+                      orderIndex: index,
                     })),
                   }))
                 }

@@ -238,6 +238,7 @@ export function MultipleChoiceEditor({
             </div>
 
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={() => handleRemoveOption(index)}
@@ -251,6 +252,7 @@ export function MultipleChoiceEditor({
       </div>
 
       <Button
+        type="button"
         onClick={handleAddOption}
         disabled={disabled || safeValue.options.length >= 6}
         data-testid="add-option-button"
