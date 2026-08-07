@@ -1335,7 +1335,9 @@ export const usePatchMarkQuizQuestionAsCorrect = (questionAttemptId: string) => 
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["patch-mark-quiz-question-as-correct", questionAttemptId],
-    mutationFn: (data: { feedback?: string } = {}): Promise<ApiResponse<Quiz>> =>
+    mutationFn: (
+      data: { feedback?: string; addToCorrectOptions?: boolean } = {},
+    ): Promise<ApiResponse<Quiz>> =>
       axiosInstance.patch(
         `/question-attempts/${questionAttemptId}/mark-correct`,
         data,

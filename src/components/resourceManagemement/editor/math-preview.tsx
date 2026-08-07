@@ -139,11 +139,11 @@ export function MathPreview({
       }
     };
 
-    // Preserve escaped dollars as literal $
-    let processedContent = content.replace(
-      /\\\$/g,
-      "\u0000ESCAPED_DOLLAR\u0000",
-    );
+    // Normalize line endings / collapse runaway blank lines before layout
+    let processedContent = content
+      .replace(/\r\n?/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/\\\$/g, "\u0000ESCAPED_DOLLAR\u0000");
 
     // Bare TeX answers like `\frac{1}{2}` → `$\frac{1}{2}$` so KaTeX runs
     processedContent = wrapBareLatexExpressions(processedContent);
@@ -158,18 +158,18 @@ export function MathPreview({
     htmlContent = htmlContent.replace(/\u0000ESCAPED_DOLLAR\u0000/g, "$");
 
     if (renderMarkdown) {
-      htmlContent = htmlContent.replace(/(?<!\n)\n(?!\n)/g, "<br>");
-      const lines = htmlContent.split("\n\n");
-      htmlContent = lines
-        .map((line) => {
-          line = line.trim();
+      // Prefer <br> over <p> so Tailwind `prose` paragraph margins don't
+      // elongate question/feedback text.
+      htmlContent = htmlContent
+        .split(/\n\n/)
+        .map((para) => {
+          const line = para.trim().replace(/\n/g, "<br>");
           if (!line) return "";
-          if (line.startsWith("<h") || line.startsWith("<div")) {
-            return line;
-          }
-          return `<p>${line}</p>`;
+          if (line.startsWith("<h") || line.startsWith("<div")) return line;
+          return line;
         })
-        .join("");
+        .filter(Boolean)
+        .join("<br>");
     }
 
     return htmlContent;
@@ -180,7 +180,7 @@ export function MathPreview({
   }
 
   const containerClass = renderMarkdown
-    ? `prose prose-sm max-w-none ${className}`
+    ? `prose prose-sm max-w-none prose-p:my-0 prose-headings:my-2 ${className}`
     : className;
 
   return (

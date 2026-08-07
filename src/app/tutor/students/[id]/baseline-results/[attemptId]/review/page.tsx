@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -725,6 +726,7 @@ function MarkAsCorrectSection({
 }) {
   const queryClient = useQueryClient();
   const [showMarkCorrectDialog, setShowMarkCorrectDialog] = useState(false);
+  const [addToCorrectOptions, setAddToCorrectOptions] = useState(false);
 
   const parseFeedback = (feedback: string): string => {
     if (!feedback) return "";
@@ -755,17 +757,26 @@ function MarkAsCorrectSection({
     }
 
     const trimmed = localFeedback.trim();
-    markQuestionAsCorrect(trimmed ? { feedback: trimmed } : {}, {
-      onSuccess: () => {
-        setShowMarkCorrectDialog(false);
-        queryClient.invalidateQueries({ queryKey: ["quiz-attempt", attemptId] });
-        toast.success("Question marked as correct.");
+    markQuestionAsCorrect(
+      {
+        ...(trimmed ? { feedback: trimmed } : {}),
+        addToCorrectOptions,
       },
-      onError: (error) => {
-        console.error("Error marking question as correct:", error);
-        toast.error("Failed to mark question as correct. Please try again.");
+      {
+        onSuccess: () => {
+          setShowMarkCorrectDialog(false);
+          setAddToCorrectOptions(false);
+          queryClient.invalidateQueries({
+            queryKey: ["quiz-attempt", attemptId],
+          });
+          toast.success("Question marked as correct.");
+        },
+        onError: (error) => {
+          console.error("Error marking question as correct:", error);
+          toast.error("Failed to mark question as correct. Please try again.");
+        },
       },
-    });
+    );
   };
 
   if (!questionAttemptId) return null;
@@ -781,6 +792,7 @@ function MarkAsCorrectSection({
         className="text-green-700 border-green-300 hover:bg-green-50"
         onClick={() => {
           setLocalFeedback(parseFeedback(existingFeedback));
+          setAddToCorrectOptions(false);
           setShowMarkCorrectDialog(true);
         }}
         disabled={isMarkingQuestionAsCorrect}
@@ -792,7 +804,10 @@ function MarkAsCorrectSection({
       <AlertDialog
         open={showMarkCorrectDialog}
         onOpenChange={(open) => {
-          if (!isMarkingQuestionAsCorrect) setShowMarkCorrectDialog(open);
+          if (!isMarkingQuestionAsCorrect) {
+            setShowMarkCorrectDialog(open);
+            if (!open) setAddToCorrectOptions(false);
+          }
         }}
       >
         <AlertDialogContent>
@@ -803,21 +818,48 @@ function MarkAsCorrectSection({
               question. You can optionally include feedback for the student.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor={`mark-correct-feedback-${questionId}`}>
-              Feedback (optional)
-            </Label>
-            <Textarea
-              id={`mark-correct-feedback-${questionId}`}
-              value={localFeedback}
-              onChange={(e) => setLocalFeedback(e.target.value)}
-              placeholder="Optional note for the student..."
-              className="min-h-[90px]"
-              disabled={isMarkingQuestionAsCorrect}
-            />
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor={`mark-correct-feedback-${questionId}`}>
+                Feedback (optional)
+              </Label>
+              <Textarea
+                id={`mark-correct-feedback-${questionId}`}
+                value={localFeedback}
+                onChange={(e) => setLocalFeedback(e.target.value)}
+                placeholder="Optional note for the student..."
+                className="min-h-[90px]"
+                disabled={isMarkingQuestionAsCorrect}
+              />
+            </div>
+            <div className="flex items-start gap-3 rounded-md border p-3">
+              <Checkbox
+                id={`add-to-correct-options-${questionId}`}
+                checked={addToCorrectOptions}
+                onCheckedChange={(checked) =>
+                  setAddToCorrectOptions(checked === true)
+                }
+                disabled={isMarkingQuestionAsCorrect}
+              />
+              <div className="space-y-1 leading-none">
+                <Label
+                  htmlFor={`add-to-correct-options-${questionId}`}
+                  className="cursor-pointer font-medium"
+                >
+                  Also add this answer to correct options
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Include the student&apos;s answer in the question&apos;s
+                  correct answers for future attempts.
+                </p>
+              </div>
+            </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isMarkingQuestionAsCorrect}>
+            <AlertDialogCancel
+              disabled={isMarkingQuestionAsCorrect}
+              onClick={() => setAddToCorrectOptions(false)}
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
