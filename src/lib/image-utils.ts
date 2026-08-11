@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, SyntheticEvent } from 'react';
 
 export interface ImageSettings {
   size_mode?: 'auto' | 'custom' | 'percentage';
@@ -56,14 +56,17 @@ export function getQuestionImageContainerStyles(
 }
 
 /**
- * Standardized error handler for question images
+ * @deprecated Prefer QuestionImage's built-in error handling.
+ * Kept for any remaining direct <img> call sites.
  */
 export function handleQuestionImageError(
-  event: React.SyntheticEvent<HTMLImageElement, Event>,
+  event: SyntheticEvent<HTMLImageElement, Event>,
   imageUrl?: string
 ) {
   console.error('Failed to load question image:', imageUrl);
-  event.currentTarget.style.display = 'none';
+  // Do not permanently hide — leave the broken-image affordance visible
+  event.currentTarget.alt =
+    event.currentTarget.alt || 'Image could not be loaded';
 }
 
 /**
