@@ -1054,14 +1054,14 @@ function FeedbackSection({
     markQuestionAsCorrect(
       {
         ...(trimmed ? { feedback: trimmed } : {}),
-        // addToCorrectOptions,
+        addToCorrectOptions,
       },
       {
         onSuccess: () => {
           if (trimmed) onFeedbackChange(trimmed);
           setEditingFeedback(null);
           setShowMarkCorrectDialog(false);
-          // setAddToCorrectOptions(false);
+          setAddToCorrectOptions(false);
           queryClient.invalidateQueries({ queryKey: ["homework", homeworkId] });
           toast.success("Question marked as correct.");
         },
@@ -1177,7 +1177,7 @@ function FeedbackSection({
         onOpenChange={(open) => {
           if (!isMarkingQuestionAsCorrect) {
             setShowMarkCorrectDialog(open);
-            // if (!open) setAddToCorrectOptions(false);
+            if (!open) setAddToCorrectOptions(false);
           }
         }}
       >
@@ -1189,20 +1189,7 @@ function FeedbackSection({
               question. You can optionally include feedback for the student.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor={`mark-correct-feedback-${questionId}`}>
-              Feedback (optional)
-            </Label>
-            <Textarea
-              id={`mark-correct-feedback-${questionId}`}
-              value={localFeedback}
-              onChange={(e) => setLocalFeedback(e.target.value)}
-              placeholder="Optional note for the student..."
-              className="min-h-[90px]"
-              disabled={isMarkingQuestionAsCorrect}
-            />
-          </div>
-          {/* <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor={`mark-correct-feedback-${questionId}`}>
                 Feedback (optional)
@@ -1238,11 +1225,11 @@ function FeedbackSection({
                 </p>
               </div>
             </div>
-          </div> */}
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel
               disabled={isMarkingQuestionAsCorrect}
-            // onClick={() => setAddToCorrectOptions(false)}
+              onClick={() => setAddToCorrectOptions(false)}
             >
               Cancel
             </AlertDialogCancel>
