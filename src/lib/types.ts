@@ -1014,8 +1014,8 @@ export interface Analytics {
 
 export interface TutorAnalytics {
   totalStudents: number;
+  upcomingSessions: number;
   completedSessions: number;
-  confirmedSessions: number;
   cancelledSessions: number;
 }
 
