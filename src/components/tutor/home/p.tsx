@@ -202,8 +202,8 @@ function TutorDashboard() {
 
   // Calculate statistics from analytics
   const totalStudents = analytics?.totalStudents || 0;
-  const upcomingSessions = analytics?.confirmedSessions || 0;
-  const submittedHomework = 0; // Not available in analytics, keeping as 0 for now
+  const upcomingSessions = analytics?.upcomingSessions || 0;
+  const completedSessions = analytics?.completedSessions || 0;
   // const averageResponseTime = "7 Hours"; // Not available in analytics, keeping as mock
 
   return (
@@ -260,10 +260,10 @@ function TutorDashboard() {
           {/* Submitted Homework Card */}
           <div className="bg-white rounded-2xl px-6 pt-6 pb-3">
             <div className="text-xl md:text-2xl lg:text-4xl font-medium mb-2">
-              {submittedHomework}
+              {completedSessions}
             </div>
             <p className="text-sm md:text-base font-medium text-textSubtitle mb-4">
-              Submitted Homework
+              Completed Sessions
             </p>
             <Button
               variant="ghost"
