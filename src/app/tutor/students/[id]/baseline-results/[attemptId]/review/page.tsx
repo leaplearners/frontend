@@ -149,7 +149,7 @@ export default function BaselineReviewPage() {
     });
   }, [review, questionsResponse]);
 
-;
+  ;
 
   if (isLoading) {
     return (
@@ -290,7 +290,7 @@ export default function BaselineReviewPage() {
                     )}
                   </div>
 
-                                    {/* User's Answer */}
+                  {/* User's Answer */}
                   {currentResult && (
                     <div>
                       <p className="text-base font-medium mb-2">Your Answer:</p>
@@ -449,8 +449,8 @@ export default function BaselineReviewPage() {
                                   currentQ.question,
                                   currentResult,
                                 ) ||
-                                  currentResult.userAnswerContent ||
-                                  "",
+                                currentResult.userAnswerContent ||
+                                "",
                               )}
                               className="text-base text-textGray whitespace-pre-wrap"
                               renderMarkdown={true}
@@ -760,12 +760,12 @@ function MarkAsCorrectSection({
     markQuestionAsCorrect(
       {
         ...(trimmed ? { feedback: trimmed } : {}),
-        addToCorrectOptions,
+        // addToCorrectOptions,
       },
       {
         onSuccess: () => {
           setShowMarkCorrectDialog(false);
-          setAddToCorrectOptions(false);
+          // setAddToCorrectOptions(false);
           queryClient.invalidateQueries({
             queryKey: ["quiz-attempt", attemptId],
           });
@@ -792,7 +792,7 @@ function MarkAsCorrectSection({
         className="text-green-700 border-green-300 hover:bg-green-50"
         onClick={() => {
           setLocalFeedback(parseFeedback(existingFeedback));
-          setAddToCorrectOptions(false);
+          // setAddToCorrectOptions(false);
           setShowMarkCorrectDialog(true);
         }}
         disabled={isMarkingQuestionAsCorrect}
@@ -806,7 +806,7 @@ function MarkAsCorrectSection({
         onOpenChange={(open) => {
           if (!isMarkingQuestionAsCorrect) {
             setShowMarkCorrectDialog(open);
-            if (!open) setAddToCorrectOptions(false);
+            // if (!open) setAddToCorrectOptions(false);
           }
         }}
       >
@@ -818,7 +818,20 @@ function MarkAsCorrectSection({
               question. You can optionally include feedback for the student.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-2 py-2">
+            <Label htmlFor={`mark-correct-feedback-${questionId}`}>
+              Feedback (optional)
+            </Label>
+            <Textarea
+              id={`mark-correct-feedback-${questionId}`}
+              value={localFeedback}
+              onChange={(e) => setLocalFeedback(e.target.value)}
+              placeholder="Optional note for the student..."
+              className="min-h-[90px]"
+              disabled={isMarkingQuestionAsCorrect}
+            />
+          </div>
+          {/* <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor={`mark-correct-feedback-${questionId}`}>
                 Feedback (optional)
@@ -854,11 +867,11 @@ function MarkAsCorrectSection({
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
           <AlertDialogFooter>
             <AlertDialogCancel
               disabled={isMarkingQuestionAsCorrect}
-              onClick={() => setAddToCorrectOptions(false)}
+            // onClick={() => setAddToCorrectOptions(false)}
             >
               Cancel
             </AlertDialogCancel>
