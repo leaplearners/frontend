@@ -42,6 +42,7 @@ import {
   cn,
   getCorrectAnswerText,
   getQuizUserAnswerDisplayText,
+  parseQuizFeedbackText,
 } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -66,7 +67,8 @@ interface QuizResult {
   isCorrect: boolean;
   pointsEarned: number;
   pointsPossible: number;
-  feedback?: string;
+  questionFeedback?: string;
+  tutorFeedback?: string;
   questionAttemptId?: string;
 }
 
@@ -171,23 +173,15 @@ export default function TutorHomeworkReviewPage() {
     });
   }, [review, questionsResponse]);
 
-  // Initialize feedback texts from results
+  // Seed editable tutor feedback from review results (not question metadata)
   useMemo(() => {
     if (questionsWithResults.length > 0) {
       const initialFeedbacks: Record<string, string> = {};
       questionsWithResults.forEach((q: QuestionWithResults) => {
-        if (q.result?.feedback) {
-          // Parse JSON feedback if it's a JSON string
-          let feedbackText = q.result.feedback;
-          try {
-            const parsed = JSON.parse(feedbackText);
-            if (parsed && typeof parsed === "object" && parsed.feedback) {
-              feedbackText = parsed.feedback;
-            }
-          } catch {
-            // Not JSON, use as is
-          }
-          initialFeedbacks[q.question.id] = feedbackText;
+        if (q.result?.tutorFeedback) {
+          initialFeedbacks[q.question.id] = parseQuizFeedbackText(
+            q.result.tutorFeedback,
+          );
         }
       });
       setFeedbackTexts(initialFeedbacks);
@@ -674,43 +668,37 @@ export default function TutorHomeworkReviewPage() {
                       </div>
                     )}
 
-                  {/* Question Metadata Feedback */}
-                  {currentResult &&
-                    currentQ.question.metadata &&
-                    (currentResult.isCorrect
-                      ? currentQ.question.metadata.correctFeedback
-                      : currentQ.question.metadata.incorrectFeedback) && (
-                      <div>
-                        <p className="text-base font-medium mb-2">Feedback:</p>
-                        <Alert className="border-blue-200 bg-blue-50">
-                          <AlertCircle className="h-4 w-4 text-blue-600" />
-                          <AlertDescription>
-                            <MathPreview
-                              content={String(
-                                currentResult.isCorrect
-                                  ? currentQ.question.metadata.correctFeedback
-                                  : currentQ.question.metadata.incorrectFeedback
-                              )}
-                              renderMarkdown
-                              className="text-blue-800 whitespace-pre-wrap"
-                            />
-                          </AlertDescription>
-                        </Alert>
-                      </div>
-                    )}
+                  {/* System / question feedback from review response */}
+                  {currentResult && currentResult.questionFeedback && (
+                    <div>
+                      <p className="text-base font-medium mb-2">Feedback:</p>
+                      <Alert className="border-blue-200 bg-blue-50">
+                        <AlertCircle className="h-4 w-4 text-blue-600" />
+                        <AlertDescription>
+                          <MathPreview
+                            content={String(
+                              currentResult.questionFeedback
+                            )}
+                            renderMarkdown
+                            className="text-blue-800 whitespace-pre-wrap"
+                          />
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  )}
 
                   {/* Tutor Additional Feedback Section */}
                   {currentResult && (
                     <FeedbackSection
                       questionId={currentQ.question.id}
                       questionAttemptId={
-                        currentResult.id ||
                         currentResult.questionAttemptId ||
+                        currentResult.id ||
                         ""
                       }
                       isCorrect={currentResult.isCorrect}
                       homeworkId={id}
-                      existingFeedback={currentResult.feedback || ""}
+                      existingFeedback={currentResult.tutorFeedback || ""}
                       feedbackText={feedbackTexts[currentQ.question.id] || ""}
                       onFeedbackChange={(text) => {
                         setFeedbackTexts((prev) => ({
@@ -793,7 +781,7 @@ export default function TutorHomeworkReviewPage() {
                   const result = q.result;
                   const isCurrent = currentQuestionIndex === index;
                   const hasFeedback =
-                    !!feedbackTexts[q.question.id] || !!result?.feedback;
+                    !!feedbackTexts[q.question.id] || !!result?.tutorFeedback;
 
                   return (
                     <button
@@ -986,22 +974,9 @@ function FeedbackSection({
   const [showMarkCorrectDialog, setShowMarkCorrectDialog] = useState(false);
   const [addToCorrectOptions, setAddToCorrectOptions] = useState(false);
 
-  // Parse feedback if it's a JSON string
-  const parseFeedback = (feedback: string): string => {
-    if (!feedback) return "";
-    try {
-      const parsed = JSON.parse(feedback);
-      if (parsed && typeof parsed === "object" && parsed.feedback) {
-        return parsed.feedback;
-      }
-    } catch {
-      // Not JSON, use as is
-    }
-    return feedback;
-  };
-
-  const parsedExistingFeedback = parseFeedback(existingFeedback);
-  const parsedFeedbackText = parseFeedback(feedbackText);
+  // Normalize legacy JSON tutorFeedback: {"feedback":"..."}
+  const parsedExistingFeedback = parseQuizFeedbackText(existingFeedback);
+  const parsedFeedbackText = parseQuizFeedbackText(feedbackText);
   const currentFeedback = parsedFeedbackText || parsedExistingFeedback;
 
   const [localFeedback, setLocalFeedback] = useState(currentFeedback);
@@ -1023,11 +998,6 @@ function FeedbackSection({
   } = usePatchMarkQuizQuestionAsCorrect(questionAttemptId);
 
   const handleSaveFeedback = () => {
-    if (!localFeedback.trim()) {
-      toast.error("Feedback cannot be empty");
-      return;
-    }
-
     addFeedback(
       { feedback: localFeedback },
       {
@@ -1083,7 +1053,7 @@ function FeedbackSection({
       <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
         <Label className="text-base font-medium flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
-          Feedback:
+          Your tutor&apos;s feedback:
         </Label>
         <div className="flex items-center gap-2">
           {!isCorrect && questionAttemptId && (
@@ -1107,7 +1077,7 @@ function FeedbackSection({
               size="sm"
               onClick={() => setEditingFeedback(questionId)}
             >
-              {currentFeedback ? "Edit Feedback" : "Add Feedback"}
+              Add more feedback
             </Button>
           )}
         </div>
@@ -1118,9 +1088,10 @@ function FeedbackSection({
           <Textarea
             value={localFeedback}
             onChange={(e) => setLocalFeedback(e.target.value)}
-            placeholder="Enter feedback for the student..."
+            placeholder="Write additional feedback for the student..."
             className="min-h-[100px]"
             disabled={isPending || isMarkingQuestionAsCorrect}
+            aria-label="Your tutor's feedback"
           />
           <div className="flex gap-2 justify-end">
             <Button
@@ -1134,11 +1105,7 @@ function FeedbackSection({
             <Button
               size="sm"
               onClick={handleSaveFeedback}
-              disabled={
-                isPending ||
-                isMarkingQuestionAsCorrect ||
-                !localFeedback.trim()
-              }
+              disabled={isPending || isMarkingQuestionAsCorrect}
             >
               {isPending ? (
                 <>
@@ -1151,23 +1118,23 @@ function FeedbackSection({
             </Button>
           </div>
         </div>
-      ) : (
-        <Alert
-          className={cn(
-            "border-yellow-200",
-            existingFeedback || feedbackText ? "bg-yellow-50" : "bg-gray-50"
-          )}
-        >
+      ) : currentFeedback ? (
+        <Alert className="border-yellow-200 bg-yellow-50">
           <AlertCircle className="h-4 w-4 text-yellow-600" />
           <AlertDescription>
             <MathPreview
-              content={currentFeedback || "No feedback provided yet"}
+              content={currentFeedback}
               renderMarkdown
-              className={cn(
-                "whitespace-pre-wrap",
-                currentFeedback ? "text-yellow-800" : "text-gray-500 italic"
-              )}
+              className="whitespace-pre-wrap text-yellow-800"
             />
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert className="border-dashed border-muted bg-muted/30">
+          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          <AlertDescription className="text-sm text-muted-foreground italic">
+            No tutor feedback yet. Use &quot;Add more feedback&quot; to leave a
+            note for the student (separate from the system feedback above).
           </AlertDescription>
         </Alert>
       )}
@@ -1192,7 +1159,7 @@ function FeedbackSection({
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor={`mark-correct-feedback-${questionId}`}>
-                Feedback (optional)
+                Your tutor&apos;s feedback (optional)
               </Label>
               <Textarea
                 id={`mark-correct-feedback-${questionId}`}
