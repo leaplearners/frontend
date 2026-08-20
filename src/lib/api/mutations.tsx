@@ -1315,6 +1315,7 @@ export const usePatchUpdateQuizQuestionDynamic = (
 };
 
 export const usePatchAddQuizFeedback = (questionAttemptId: string) => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["patch-add-quiz-feedback", questionAttemptId],
     mutationFn: (data: { feedback: string }): Promise<ApiResponse<Quiz>> =>
@@ -1323,6 +1324,7 @@ export const usePatchAddQuizFeedback = (questionAttemptId: string) => {
         data,
       ),
     onSuccess: (data: ApiResponse<Quiz>) => {
+      queryClient.invalidateQueries({ queryKey: ["homework"] });
       return data;
     },
     onError: (error: AxiosError) => {

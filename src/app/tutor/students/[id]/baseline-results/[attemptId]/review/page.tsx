@@ -2,7 +2,10 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useGetQuizAttemptById, useGetQuizQuestions } from "@/lib/api/queries";
-import { usePatchMarkQuizQuestionAsCorrect } from "@/lib/api/mutations";
+import {
+  usePatchAddQuizFeedback,
+  usePatchMarkQuizQuestionAsCorrect,
+} from "@/lib/api/mutations";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,12 +31,14 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
+  MessageSquare,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   cn,
   getCorrectAnswerText,
   getQuizUserAnswerDisplayText,
+  parseQuizFeedbackText,
 } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -58,7 +63,10 @@ interface QuizResult {
   isCorrect: boolean;
   pointsEarned: number;
   pointsPossible: number;
+  /** @deprecated Prefer questionFeedback / tutorFeedback */
   feedback?: string;
+  questionFeedback?: string;
+  tutorFeedback?: string;
   questionAttemptId?: string;
 }
 
@@ -67,6 +75,10 @@ export default function BaselineReviewPage() {
   const router = useRouter();
   const id = params.attemptId as string;
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [feedbackTexts, setFeedbackTexts] = useState<Record<string, string>>(
+    {},
+  );
+  const [editingFeedback, setEditingFeedback] = useState<string | null>(null);
 
   // id is the quizAttemptId
   const { data: reviewResponse, isLoading, error } = useGetQuizAttemptById(id);
@@ -148,6 +160,21 @@ export default function BaselineReviewPage() {
       };
     });
   }, [review, questionsResponse]);
+
+  // Seed editable tutor feedback from review results
+  useMemo(() => {
+    if (questionsWithResults.length > 0) {
+      const initialFeedbacks: Record<string, string> = {};
+      questionsWithResults.forEach((q: QuestionWithResults) => {
+        if (q.result?.tutorFeedback) {
+          initialFeedbacks[q.question.id] = parseQuizFeedbackText(
+            q.result.tutorFeedback,
+          );
+        }
+      });
+      setFeedbackTexts(initialFeedbacks);
+    }
+  }, [questionsWithResults]);
 
 ;
 
@@ -544,56 +571,48 @@ export default function BaselineReviewPage() {
                       </div>
                     )}
 
-                  {/* Metadata Feedback */}
-                  {currentResult &&
-                    currentQ.question.metadata &&
-                    (currentResult.isCorrect
-                      ? currentQ.question.metadata.correctFeedback
-                      : currentQ.question.metadata.incorrectFeedback) && (
-                      <div>
-                        <p className="text-base font-medium mb-2">Feedback:</p>
-                        <Alert className="border-blue-200 bg-blue-50">
-                          <AlertCircle className="h-4 w-4 text-blue-600" />
-                          <AlertDescription>
-                            <MathPreview content={currentResult.isCorrect
-                              ? currentQ.question.metadata.correctFeedback
-                              : currentQ.question.metadata.incorrectFeedback} renderMarkdown={true} className="text-blue-800 whitespace-pre-wrap" />
-                          </AlertDescription>
-                        </Alert>
-                      </div>
-                    )}
-
-                  {/* Tutor Feedback */}
-                  {currentResult?.feedback && (
+                  {/* System / question feedback from review response */}
+                  {currentResult && currentResult.questionFeedback && (
                     <div>
-                      <p className="text-base font-medium mb-2">
-                        Additional Feedback:
-                      </p>
-                      <Alert className="border-yellow-200 bg-yellow-50">
-                        <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <p className="text-base font-medium mb-2">Feedback:</p>
+                      <Alert className="border-blue-200 bg-blue-50">
+                        <AlertCircle className="h-4 w-4 text-blue-600" />
                         <AlertDescription>
-                          <MathPreview content={(() => {
-                            try {
-                              const parsed = JSON.parse(currentResult.feedback!);
-                              return parsed?.feedback ?? currentResult.feedback;
-                            } catch {
-                              return currentResult.feedback;
-                            }
-                          })()} renderMarkdown={true} className="text-yellow-800 whitespace-pre-wrap" />
+                          <MathPreview
+                            content={String(currentResult.questionFeedback)}
+                            renderMarkdown
+                            className="text-blue-800 whitespace-pre-wrap"
+                          />
                         </AlertDescription>
                       </Alert>
                     </div>
                   )}
 
-                  {/* Mark incorrect answers as correct */}
-                  {currentResult && !currentResult.isCorrect && (
-                    <MarkAsCorrectSection
+                  {/* Tutor Additional Feedback Section */}
+                  {currentResult && (
+                    <FeedbackSection
                       questionId={currentQ.question.id}
                       questionAttemptId={
-                        currentResult.id || currentResult.questionAttemptId || ""
+                        currentResult.questionAttemptId ||
+                        currentResult.id ||
+                        ""
                       }
+                      isCorrect={currentResult.isCorrect}
                       attemptId={id}
-                      existingFeedback={currentResult.feedback || ""}
+                      existingFeedback={
+                        currentResult.tutorFeedback ||
+                        currentResult.feedback ||
+                        ""
+                      }
+                      feedbackText={feedbackTexts[currentQ.question.id] || ""}
+                      onFeedbackChange={(text) => {
+                        setFeedbackTexts((prev) => ({
+                          ...prev,
+                          [currentQ.question.id]: text,
+                        }));
+                      }}
+                      editingFeedback={editingFeedback}
+                      setEditingFeedback={setEditingFeedback}
                     />
                   )}
 
@@ -663,6 +682,8 @@ export default function BaselineReviewPage() {
                 (q: QuestionWithResults, index: number) => {
                   const result = q.result;
                   const isCurrent = currentQuestionIndex === index;
+                  const hasFeedback =
+                    !!feedbackTexts[q.question.id] || !!result?.tutorFeedback;
 
                   return (
                     <button
@@ -696,11 +717,16 @@ export default function BaselineReviewPage() {
                       <span className="truncate flex-1 text-left">
                         Question {index + 1}
                       </span>
-                      {result?.isCorrect ? (
-                        <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                      ) : result ? (
-                        <XCircle className="h-4 w-4 flex-shrink-0" />
-                      ) : null}
+                      <div className="flex items-center gap-1">
+                        {result?.isCorrect ? (
+                          <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                        ) : result ? (
+                          <XCircle className="h-4 w-4 flex-shrink-0" />
+                        ) : null}
+                        {hasFeedback && (
+                          <MessageSquare className="h-3 w-3 flex-shrink-0 text-blue-600" />
+                        )}
+                      </div>
                     </button>
                   );
                 }
@@ -713,42 +739,70 @@ export default function BaselineReviewPage() {
   );
 }
 
-function MarkAsCorrectSection({
-  questionId,
-  questionAttemptId,
-  attemptId,
-  existingFeedback,
-}: {
+interface FeedbackSectionProps {
   questionId: string;
   questionAttemptId: string;
+  isCorrect: boolean;
   attemptId: string;
   existingFeedback: string;
-}) {
+  feedbackText: string;
+  onFeedbackChange: (text: string) => void;
+  editingFeedback: string | null;
+  setEditingFeedback: (id: string | null) => void;
+}
+
+function FeedbackSection({
+  questionId,
+  questionAttemptId,
+  isCorrect,
+  attemptId,
+  existingFeedback,
+  feedbackText,
+  onFeedbackChange,
+  editingFeedback,
+  setEditingFeedback,
+}: FeedbackSectionProps) {
   const queryClient = useQueryClient();
   const [showMarkCorrectDialog, setShowMarkCorrectDialog] = useState(false);
   const [addToCorrectOptions, setAddToCorrectOptions] = useState(false);
 
-  const parseFeedback = (feedback: string): string => {
-    if (!feedback) return "";
-    try {
-      const parsed = JSON.parse(feedback);
-      if (parsed && typeof parsed === "object" && parsed.feedback) {
-        return parsed.feedback;
-      }
-    } catch {
-      // Not JSON
-    }
-    return feedback;
-  };
+  const parsedExistingFeedback = parseQuizFeedbackText(existingFeedback);
+  const parsedFeedbackText = parseQuizFeedbackText(feedbackText);
+  const currentFeedback = parsedFeedbackText || parsedExistingFeedback;
 
-  const [localFeedback, setLocalFeedback] = useState(
-    parseFeedback(existingFeedback),
-  );
+  const [localFeedback, setLocalFeedback] = useState(currentFeedback);
+  const isEditing = editingFeedback === questionId;
+
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalFeedback(currentFeedback);
+    }
+  }, [questionId, currentFeedback, isEditing]);
+
+  const { mutate: addFeedback, isPending } =
+    usePatchAddQuizFeedback(questionAttemptId);
 
   const {
     mutate: markQuestionAsCorrect,
     isPending: isMarkingQuestionAsCorrect,
   } = usePatchMarkQuizQuestionAsCorrect(questionAttemptId);
+
+  const handleSaveFeedback = () => {
+    addFeedback(
+      { feedback: localFeedback },
+      {
+        onSuccess: () => {
+          onFeedbackChange(localFeedback);
+          setEditingFeedback(null);
+          toast.success("Feedback saved successfully!");
+        },
+        onError: (error) => {
+          console.error("Error saving feedback:", error);
+          toast.error("Failed to save feedback. Please try again.");
+        },
+      },
+    );
+  };
 
   const handleMarkAsCorrect = () => {
     if (!questionAttemptId) {
@@ -764,6 +818,8 @@ function MarkAsCorrectSection({
       },
       {
         onSuccess: () => {
+          if (trimmed) onFeedbackChange(trimmed);
+          setEditingFeedback(null);
           setShowMarkCorrectDialog(false);
           setAddToCorrectOptions(false);
           queryClient.invalidateQueries({
@@ -779,27 +835,101 @@ function MarkAsCorrectSection({
     );
   };
 
-  if (!questionAttemptId) return null;
+  const handleCancel = () => {
+    setLocalFeedback(currentFeedback);
+    setEditingFeedback(null);
+  };
 
   return (
-    <div className="flex items-center justify-between gap-2 flex-wrap rounded-lg border border-green-200 bg-green-50/50 p-3">
-      <p className="text-sm text-green-800">
-        Override the automatic grade if this answer should count as correct.
-      </p>
-      <Button
-        variant="outline"
-        size="sm"
-        className="text-green-700 border-green-300 hover:bg-green-50"
-        onClick={() => {
-          setLocalFeedback(parseFeedback(existingFeedback));
-          setAddToCorrectOptions(false);
-          setShowMarkCorrectDialog(true);
-        }}
-        disabled={isMarkingQuestionAsCorrect}
-      >
-        <CheckCircle className="h-4 w-4 mr-1.5" />
-        Mark as Correct
-      </Button>
+    <div>
+      <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+        <Label className="text-base font-medium flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" />
+          Your tutor&apos;s feedback:
+        </Label>
+        <div className="flex items-center gap-2">
+          {!isCorrect && questionAttemptId && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-green-700 border-green-300 hover:bg-green-50"
+              onClick={() => {
+                setAddToCorrectOptions(false);
+                setShowMarkCorrectDialog(true);
+              }}
+              disabled={isMarkingQuestionAsCorrect}
+            >
+              <CheckCircle className="h-4 w-4 mr-1.5" />
+              Mark as Correct
+            </Button>
+          )}
+          {!isEditing && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingFeedback(questionId)}
+            >
+              Add more feedback
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-3">
+          <Textarea
+            value={localFeedback}
+            onChange={(e) => setLocalFeedback(e.target.value)}
+            placeholder="Write additional feedback for the student..."
+            className="min-h-[100px]"
+            disabled={isPending || isMarkingQuestionAsCorrect}
+            aria-label="Your tutor's feedback"
+          />
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              disabled={isPending || isMarkingQuestionAsCorrect}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSaveFeedback}
+              disabled={isPending || isMarkingQuestionAsCorrect}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Feedback"
+              )}
+            </Button>
+          </div>
+        </div>
+      ) : currentFeedback ? (
+        <Alert className="border-yellow-200 bg-yellow-50">
+          <AlertCircle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription>
+            <MathPreview
+              content={currentFeedback}
+              renderMarkdown
+              className="whitespace-pre-wrap text-yellow-800"
+            />
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert className="border-dashed border-muted bg-muted/30">
+          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          <AlertDescription className="text-sm text-muted-foreground italic">
+            No tutor feedback yet. Use &quot;Add more feedback&quot; to leave a
+            note for the student (separate from the system feedback above).
+          </AlertDescription>
+        </Alert>
+      )}
 
       <AlertDialog
         open={showMarkCorrectDialog}
@@ -821,7 +951,7 @@ function MarkAsCorrectSection({
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor={`mark-correct-feedback-${questionId}`}>
-                Feedback (optional)
+                Your tutor&apos;s feedback (optional)
               </Label>
               <Textarea
                 id={`mark-correct-feedback-${questionId}`}

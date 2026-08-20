@@ -20,12 +20,14 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import {
   cn,
   getCorrectAnswerText,
   getQuizUserAnswerDisplayText,
+  parseQuizFeedbackText,
 } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { QuestionImage } from "@/components/ui/question-image";
@@ -50,7 +52,11 @@ interface QuizResult {
   isCorrect: boolean;
   pointsEarned: number;
   pointsPossible: number;
+  /** @deprecated Prefer questionFeedback / tutorFeedback */
   feedback?: string;
+  questionFeedback?: string;
+  tutorFeedback?: string;
+  questionAttemptId?: string;
 }
 
 export default function QuizAttemptReviewPage() {
@@ -653,21 +659,17 @@ export default function QuizAttemptReviewPage() {
                       </div>
                     )}
 
-                  {/* Question Metadata Feedback */}
-                  {currentQ.question.metadata &&
-                    (currentResult.isCorrect
-                      ? currentQ.question.metadata.correctFeedback
-                      : currentQ.question.metadata.incorrectFeedback) && (
+                                    {/* System / question feedback from review response */}
+                  {currentResult &&
+                    parseQuizFeedbackText(currentResult.questionFeedback) && (
                       <div>
                         <p className="text-base font-medium mb-2">Feedback:</p>
                         <Alert className="border-blue-200 bg-blue-50">
                           <AlertCircle className="h-4 w-4 text-blue-600" />
                           <AlertDescription>
                             <MathPreview
-                              content={String(
-                                currentResult.isCorrect
-                                  ? currentQ.question.metadata.correctFeedback
-                                  : currentQ.question.metadata.incorrectFeedback
+                              content={parseQuizFeedbackText(
+                                currentResult.questionFeedback,
                               )}
                               renderMarkdown
                               className="text-blue-800 whitespace-pre-wrap"
@@ -677,42 +679,32 @@ export default function QuizAttemptReviewPage() {
                       </div>
                     )}
 
-                  {/* Tutor Additional Feedback */}
-                  {currentResult.feedback && (
-                    <div>
-                      <p className="text-base font-medium mb-2">
-                        Feedback:
-                      </p>
-                      <Alert className="border-yellow-200 bg-yellow-50">
-                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                        <AlertDescription>
-                          <MathPreview
-                            content={(() => {
-                              try {
-                                const parsed = JSON.parse(
-                                  currentResult.feedback as string,
-                                );
-                                if (
-                                  parsed &&
-                                  typeof parsed === "object" &&
-                                  (parsed as any).feedback
-                                ) {
-                                  return String((parsed as any).feedback);
-                                }
-                              } catch {
-                                // Not JSON, use as is
-                              }
-                              return String(currentResult.feedback);
-                            })()}
-                            renderMarkdown
-                            className="text-yellow-800 whitespace-pre-wrap"
-                          />
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  )}
+                  {/* Tutor feedback from review response */}
+                  {currentResult &&
+                    parseQuizFeedbackText(
+                      currentResult.tutorFeedback || currentResult.feedback,
+                    ) && (
+                      <div>
+                        <p className="text-base font-medium mb-2">
+                          Your tutor&apos;s feedback:
+                        </p>
+                        <Alert className="border-2 border-amber-400 bg-amber-50">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <AlertDescription>
+                            <MathPreview
+                              content={parseQuizFeedbackText(
+                                currentResult.tutorFeedback ||
+                                  currentResult.feedback,
+                              )}
+                              renderMarkdown
+                              className="text-amber-900 whitespace-pre-wrap"
+                            />
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+                    )}
 
-                  {/* Explanation if available */}
+{/* Explanation if available */}
                   {currentQ.question.explanation && (
                     <div>
                       <p className="text-base font-medium mb-2">Explanation:</p>
@@ -773,11 +765,16 @@ export default function QuizAttemptReviewPage() {
         {/* Results Navigation Sidebar */}
         <Card className="w-64 h-fit sticky top-6">
           <CardContent className="pt-6">
-            <div className="space-y-2 max-h-[80vh] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[80vh] overflow-y-auto p-1">
               {questionsWithResults.map(
                 (q: QuestionWithResults, index: number) => {
                   const result = q.result;
                   const isCurrent = currentQuestionIndex === index;
+                  const hasTutorFeedback = Boolean(
+                    parseQuizFeedbackText(
+                      result?.tutorFeedback || result?.feedback,
+                    ),
+                  );
 
                   return (
                     <button
@@ -791,7 +788,8 @@ export default function QuizAttemptReviewPage() {
                             ? "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
                             : result
                               ? "bg-red-100 text-red-700 hover:bg-red-200 border border-red-300"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300",
+                        hasTutorFeedback && "ring-1 ring-amber-400 ring-offset-1",
                       )}
                     >
                       <div
@@ -811,6 +809,14 @@ export default function QuizAttemptReviewPage() {
                       <span className="truncate flex-1 text-left">
                         Question {index + 1}
                       </span>
+                      {hasTutorFeedback && (
+                        <MessageSquare
+                          className={cn(
+                            "h-3.5 w-3.5 flex-shrink-0",
+                            isCurrent ? "text-amber-200" : "text-amber-600",
+                          )}
+                        />
+                      )}
                       {result?.isCorrect ? (
                         <CheckCircle className="h-4 w-4 flex-shrink-0" />
                       ) : result ? (
