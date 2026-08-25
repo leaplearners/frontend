@@ -178,8 +178,16 @@ export default function HomeworkStatusPage() {
                           const isAwaitingBuddyReview =
                             status === "Awaiting Buddy Review";
                           const isTodo = status === "To do";
+                          const isUnopened = item.isOpened === false;
                           return (
-                            <TableRow key={`${item.type}-${idx}`} className="group">
+                            <TableRow
+                              key={`${item.type}-${idx}`}
+                              className={cn(
+                                "group",
+                                isUnopened &&
+                                  "bg-emerald-50 hover:bg-emerald-50/90",
+                              )}
+                            >
                               <TableCell className="font-medium">
                                 <span className="inline-flex items-center gap-2">
                                   <FileQuestion className="h-4 w-4 text-muted-foreground" />

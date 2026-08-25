@@ -1295,10 +1295,13 @@ export interface LearningPathItem {
 
 export interface RecentHomeworkItem {
   type: string;
+  homeworkId: string;
+  quizAttemptId: string;
   lessonName: string;
   quizName: string;
   status: string;
   dateCompleted: string;
+  isOpened: boolean;
 }
 
 export interface HistoryHomeworkItem {
