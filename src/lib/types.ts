@@ -1312,6 +1312,7 @@ export interface HistoryHomeworkItem {
   dateCompleted: string;
   percentage: number;
   isPassed: boolean;
+  isOpened: boolean;
 }
 export interface SchemeOfWork {
   quizId: string;

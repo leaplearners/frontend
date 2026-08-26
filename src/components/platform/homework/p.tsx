@@ -318,8 +318,16 @@ export default function HomeworkStatusPage() {
                           const type = String(item.type ?? "").toLowerCase();
                           const isPassed = item.isPassed === true;
                           const result = isPassed ? "Passed" : "Failed";
+                          const isUnopened = item.isOpened === false;
                           return (
-                            <TableRow key={`${item.type}-${idx}`} className="group">
+                            <TableRow
+                              key={`${item.type}-${idx}`}
+                              className={cn(
+                                "group",
+                                isUnopened &&
+                                  "bg-emerald-50 hover:bg-emerald-50/90",
+                              )}
+                            >
                               <TableCell className="font-medium">
                                 {item.lessonName || "—"}
                               </TableCell>
