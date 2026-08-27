@@ -18,6 +18,7 @@ import {
   usePostAssignBaselineTest,
   usePatchSkipLearningPathItem,
   usePatchUnskipLearningPathItem,
+  usePatchReorderLearningPathItems,
 } from "@/lib/api/mutations";
 import { Badge } from "@/components/ui/badge";
 import BackArrow from "@/assets/svgs/arrowback";
@@ -49,13 +50,32 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { usePostCreateChat } from "@/lib/api/mutations";
 import { toast } from "react-toastify";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 import type { LearningPathSummary, SchemeOfWork } from "@/lib/types";
 import AssignHomeworkForm from "@/components/tutor/homework/assignHomework";
 import { cn } from "@/lib/utils";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+const EMPTY_SCHEME: SchemeOfWork[] = [];
 
 const statusBadgeClass: Record<string, string> = {
   completed: "bg-green-100 text-green-700",
@@ -117,6 +137,113 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+function SchemeSortableRow({
+  item,
+  skipActionQuizId,
+  isSkipping,
+  isUnskipping,
+  isReordering,
+  onSkipToggle,
+  onAssign,
+}: {
+  item: SchemeOfWork;
+  skipActionQuizId: string | null;
+  isSkipping: boolean;
+  isUnskipping: boolean;
+  isReordering: boolean;
+  onSkipToggle: (item: SchemeOfWork) => void;
+  onAssign: (item: SchemeOfWork) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.quizId, disabled: isReordering });
+
+  const isSkipped = String(item.status).toLowerCase() === "skipped";
+  const statusLabel = isSkipped ? "Skipped" : "Queue";
+  const canAssign = item.inLearningPath;
+  const isRowSkipPending =
+    skipActionQuizId === item.quizId && (isSkipping || isUnskipping);
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : undefined,
+      }}
+      className={cn("group", !item.inLearningPath && "opacity-50")}
+    >
+      <TableCell className="w-8 px-2">
+        <div
+          {...attributes}
+          {...listeners}
+          aria-label={`Reorder ${item.quizTitle}`}
+          className={cn(
+            "p-1",
+            isReordering
+              ? "cursor-not-allowed opacity-50"
+              : "cursor-grab active:cursor-grabbing",
+          )}
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </TableCell>
+      <TableCell className="text-sm text-gray-500">
+        {item.sectionTitle}
+      </TableCell>
+      <TableCell className="text-sm text-gray-500">
+        {item.lessonTitle}
+      </TableCell>
+      <TableCell className="font-medium text-sm max-w-[220px]">
+        <span className="line-clamp-2">{item.quizTitle}</span>
+      </TableCell>
+      <TableCell>
+        <Badge
+          className={`text-xs font-medium capitalize ${
+            isSkipped ? "bg-gray-100 text-gray-600" : "bg-yellow-100 text-yellow-700"
+          }`}
+        >
+          {statusLabel}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            disabled={(!canAssign && !isSkipped) || isRowSkipPending}
+            onClick={() => onSkipToggle(item)}
+          >
+            {isRowSkipPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : isSkipped ? (
+              "Unskip Quiz"
+            ) : (
+              "Skip Quiz"
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            disabled={!canAssign || isSkipped}
+            onClick={() => onAssign(item)}
+          >
+            Assign Quiz
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function StudentPage({ id }: { id: string }) {
@@ -141,7 +268,7 @@ export default function StudentPage({ id }: { id: string }) {
   // Right-panel data
   const { data: schemeData, isLoading: schemeLoading } =
     useGetChildSchemeOfWork(id);
-  const schemeOfWork = schemeData?.data || [];
+  const schemeOfWork = schemeData?.data || EMPTY_SCHEME;
 
   const { data: summaryData, isLoading: summaryLoading } =
     useGetChildLearningPathSummary(id);
@@ -217,7 +344,10 @@ export default function StudentPage({ id }: { id: string }) {
     usePatchSkipLearningPathItem();
   const { mutateAsync: unskipLearningPathItem, isPending: isUnskipping } =
     usePatchUnskipLearningPathItem();
+  const { mutate: reorderScheme, isPending: isReordering } =
+    usePatchReorderLearningPathItems(id);
   const [skipActionQuizId, setSkipActionQuizId] = useState<string | null>(null);
+  const [orderedSchemeRows, setOrderedSchemeRows] = useState<SchemeOfWork[]>([]);
 
   const handleSkipToggle = async (item: SchemeOfWork) => {
     const isSkipped = String(item.status).toLowerCase() === "skipped";
@@ -253,9 +383,50 @@ export default function StudentPage({ id }: { id: string }) {
   };
 
   const schemeRows = useMemo(() => {
-    const rows = (schemeOfWork || []) as SchemeOfWork[];
-    return [...rows].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    return [...schemeOfWork].sort(
+      (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0),
+    );
   }, [schemeOfWork]);
+
+  useEffect(() => {
+    setOrderedSchemeRows(schemeRows);
+  }, [schemeRows]);
+
+  const schemeSensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleSchemeDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || isReordering) return;
+
+    const oldIndex = orderedSchemeRows.findIndex(
+      (item) => item.quizId === active.id,
+    );
+    const newIndex = orderedSchemeRows.findIndex(
+      (item) => item.quizId === over.id,
+    );
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const previousItems = orderedSchemeRows;
+    const newItems = arrayMove(orderedSchemeRows, oldIndex, newIndex);
+    setOrderedSchemeRows(newItems);
+    reorderScheme(
+      { quizIdsInOrder: newItems.map((item) => item.quizId) },
+      {
+        onSuccess: () => {
+          toast.success("Quiz order updated");
+        },
+        onError: () => {
+          toast.error("Failed to update quiz order");
+          setOrderedSchemeRows(previousItems);
+        },
+      },
+    );
+  };
 
   // Progress snapshot — totals are across all year-group quizzes in the scheme.
   // Baseline-excluded items have inLearningPath=false; tutor skips use status "skipped".
@@ -566,91 +737,46 @@ export default function StudentPage({ id }: { id: string }) {
                 <EmptyState message="No scheme of work available for this student." />
               ) : (
                 <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Section</TableHead>
-                        <TableHead>Lesson</TableHead>
-                        <TableHead>Quiz title</TableHead>
-                        {/* <TableHead>Quiz description</TableHead> */}
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {schemeRows.map((item) => {
-                        const isSkipped =
-                          String(item.status).toLowerCase() === "skipped";
-                        const statusLabel = isSkipped ? "Skipped" : "Queue";
-                        const canAssign = item.inLearningPath;
-                        const isRowSkipPending =
-                          skipActionQuizId === item.quizId &&
-                          (isSkipping || isUnskipping);
-                        return (
-                          <TableRow
-                            key={`${item.quizId}-${item.orderIndex}`}
-                            className={!item.inLearningPath ? "opacity-50" : undefined}
-                          >
-                            <TableCell className="text-sm text-gray-500">
-                              {item.sectionTitle}
-                            </TableCell>
-                            <TableCell className="text-sm text-gray-500">
-                              {item.lessonTitle}
-                            </TableCell>
-                            <TableCell className="font-medium text-sm max-w-[220px]">
-                              <span className="line-clamp-2">{item.quizTitle}</span>
-                            </TableCell>
-                            {/* <TableCell className="text-sm text-gray-400 max-w-[260px]">
-                              <span className="line-clamp-2">—</span>
-                            </TableCell> */}
-                            <TableCell>
-                              <Badge
-                                className={`text-xs font-medium capitalize ${isSkipped
-                                  ? "bg-gray-100 text-gray-600"
-                                  : "bg-yellow-100 text-yellow-700"
-                                  }`}
-                              >
-                                {statusLabel}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full"
-                                  disabled={
-                                    (!canAssign && !isSkipped) || isRowSkipPending
-                                  }
-                                  onClick={() => handleSkipToggle(item)}
-                                >
-                                  {isRowSkipPending ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  ) : isSkipped ? (
-                                    "Unskip Quiz"
-                                  ) : (
-                                    "Skip Quiz"
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full"
-                                  disabled={!canAssign || isSkipped}
-                                  onClick={() => {
-                                    setSchemeQuizToAssign(item);
-                                    setShowAssignQuizDialog(true);
-                                  }}
-                                >
-                                  Assign Quiz
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                  <DndContext
+                    sensors={schemeSensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleSchemeDragEnd}
+                  >
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-8 px-2" />
+                          <TableHead>Section</TableHead>
+                          <TableHead>Lesson</TableHead>
+                          <TableHead>Quiz title</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <SortableContext
+                          items={orderedSchemeRows.map((item) => item.quizId)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {orderedSchemeRows.map((item) => (
+                            <SchemeSortableRow
+                              key={item.quizId}
+                              item={item}
+                              skipActionQuizId={skipActionQuizId}
+                              isSkipping={isSkipping}
+                              isUnskipping={isUnskipping}
+                              isReordering={isReordering}
+                              onSkipToggle={handleSkipToggle}
+                              onAssign={(schemeItem) => {
+                                setSchemeQuizToAssign(schemeItem);
+                                setShowAssignQuizDialog(true);
+                              }}
+                            />
+                          ))}
+                        </SortableContext>
+                      </TableBody>
+                    </Table>
+                  </DndContext>
                 </div>
               )}
             </TabsContent>
