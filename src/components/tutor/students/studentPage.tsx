@@ -77,15 +77,54 @@ import { cn } from "@/lib/utils";
 
 const EMPTY_SCHEME: SchemeOfWork[] = [];
 
+const LEARNING_PATH_STATUS_LABELS: Record<string, string> = {
+  queue: "Queue",
+  assigned: "Assigned",
+  completed: "Completed",
+  failed: "Failed",
+  max_failed: "Max failed",
+  skipped: "Skipped",
+  mastered: "Mastered",
+};
+
 const statusBadgeClass: Record<string, string> = {
   completed: "bg-green-100 text-green-700",
+  mastered: "bg-green-100 text-green-700",
   assigned: "bg-blue-100 text-blue-700",
   queue: "bg-yellow-100 text-yellow-700",
   failed: "bg-red-100 text-red-700",
   max_failed: "bg-red-200 text-red-800",
-  passed: "bg-green-100 text-green-700",
-  "forced complete": "bg-purple-100 text-purple-700",
+  skipped: "bg-gray-100 text-gray-600",
 };
+
+function normalizeLearningPathStatus(status: string | null | undefined) {
+  return String(status ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function LearningPathStatusBadge({
+  status,
+}: {
+  status: string | null | undefined;
+}) {
+  const key = normalizeLearningPathStatus(status);
+  if (!key) {
+    return <span className="text-muted-foreground/60">—</span>;
+  }
+  const label =
+    LEARNING_PATH_STATUS_LABELS[key] ?? key.replace(/_/g, " ");
+  return (
+    <Badge
+      className={cn(
+        "text-xs font-medium capitalize",
+        statusBadgeClass[key] ?? "bg-gray-100 text-gray-600",
+      )}
+    >
+      {label}
+    </Badge>
+  );
+}
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
@@ -161,10 +200,12 @@ function SchemeSortableRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.quizId, disabled: isReordering });
+  } = useSortable({
+    id: item.quizId,
+    disabled: isReordering || !item.inLearningPath,
+  });
 
-  const isSkipped = String(item.status).toLowerCase() === "skipped";
-  const statusLabel = isSkipped ? "Skipped" : "Queue";
+  const isSkipped = normalizeLearningPathStatus(item.status) === "skipped";
   const canAssign = item.inLearningPath;
   const isRowSkipPending =
     skipActionQuizId === item.quizId && (isSkipping || isUnskipping);
@@ -180,19 +221,25 @@ function SchemeSortableRow({
       className={cn("group", !item.inLearningPath && "opacity-50")}
     >
       <TableCell className="w-8 px-2">
-        <div
-          {...attributes}
-          {...listeners}
-          aria-label={`Reorder ${item.quizTitle}`}
-          className={cn(
-            "p-1",
-            isReordering
-              ? "cursor-not-allowed opacity-50"
-              : "cursor-grab active:cursor-grabbing",
-          )}
-        >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </div>
+        {item.inLearningPath ? (
+          <div
+            {...attributes}
+            {...listeners}
+            aria-label={`Reorder ${item.quizTitle}`}
+            className={cn(
+              "p-1",
+              isReordering
+                ? "cursor-not-allowed opacity-50"
+                : "cursor-grab active:cursor-grabbing",
+            )}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="p-1" aria-hidden>
+            <GripVertical className="h-4 w-4 text-gray-200" />
+          </div>
+        )}
       </TableCell>
       <TableCell className="text-sm text-gray-500">
         {item.sectionTitle}
@@ -204,13 +251,7 @@ function SchemeSortableRow({
         <span className="line-clamp-2">{item.quizTitle}</span>
       </TableCell>
       <TableCell>
-        <Badge
-          className={`text-xs font-medium capitalize ${
-            isSkipped ? "bg-gray-100 text-gray-600" : "bg-yellow-100 text-yellow-700"
-          }`}
-        >
-          {statusLabel}
-        </Badge>
+        <LearningPathStatusBadge status={item.status} />
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
@@ -350,7 +391,7 @@ export default function StudentPage({ id }: { id: string }) {
   const [orderedSchemeRows, setOrderedSchemeRows] = useState<SchemeOfWork[]>([]);
 
   const handleSkipToggle = async (item: SchemeOfWork) => {
-    const isSkipped = String(item.status).toLowerCase() === "skipped";
+    const isSkipped = normalizeLearningPathStatus(item.status) === "skipped";
     setSkipActionQuizId(item.quizId);
     try {
       if (isSkipped) {
@@ -382,15 +423,9 @@ export default function StudentPage({ id }: { id: string }) {
     }
   };
 
-  const schemeRows = useMemo(() => {
-    return [...schemeOfWork].sort(
-      (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0),
-    );
-  }, [schemeOfWork]);
-
   useEffect(() => {
-    setOrderedSchemeRows(schemeRows);
-  }, [schemeRows]);
+    setOrderedSchemeRows(schemeOfWork);
+  }, [schemeOfWork]);
 
   const schemeSensors = useSensors(
     useSensor(PointerSensor),
@@ -403,16 +438,21 @@ export default function StudentPage({ id }: { id: string }) {
     const { active, over } = event;
     if (!over || active.id === over.id || isReordering) return;
 
-    const oldIndex = orderedSchemeRows.findIndex(
+    const activeItem = orderedSchemeRows.find(
       (item) => item.quizId === active.id,
     );
-    const newIndex = orderedSchemeRows.findIndex(
-      (item) => item.quizId === over.id,
-    );
+    const overItem = orderedSchemeRows.find((item) => item.quizId === over.id);
+    if (!activeItem?.inLearningPath || !overItem?.inLearningPath) return;
+
+    const inPath = orderedSchemeRows.filter((item) => item.inLearningPath);
+    const outOfPath = orderedSchemeRows.filter((item) => !item.inLearningPath);
+    const oldIndex = inPath.findIndex((item) => item.quizId === active.id);
+    const newIndex = inPath.findIndex((item) => item.quizId === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
 
     const previousItems = orderedSchemeRows;
-    const newItems = arrayMove(orderedSchemeRows, oldIndex, newIndex);
+    const reorderedInPath = arrayMove(inPath, oldIndex, newIndex);
+    const newItems = [...reorderedInPath, ...outOfPath];
     setOrderedSchemeRows(newItems);
     reorderScheme(
       { quizIdsInOrder: newItems.map((item) => item.quizId) },
@@ -822,13 +862,9 @@ export default function StudentPage({ id }: { id: string }) {
                                     {item.lessonTitle}
                                   </TableCell>
                                   <TableCell>
-                                    <Badge
-                                      className={`text-xs font-medium capitalize ${statusBadgeClass[item.status] ??
-                                        "bg-gray-100 text-gray-600"
-                                        }`}
-                                    >
-                                      {item.status.replace(/_/g, " ")}
-                                    </Badge>
+                                    <LearningPathStatusBadge
+                                      status={item.status}
+                                    />
                                   </TableCell>
                                 </TableRow>
                               ))}
