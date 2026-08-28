@@ -2382,6 +2382,28 @@ export const usePostAssignBaselineTest = () => {
   });
 };
 
+export const usePatchReorderLearningPathItems = (childId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["patch-reorder-learning-path-items", childId],
+    mutationFn: (data: {
+      quizIdsInOrder: string[];
+    }): Promise<ApiResponse<LearningPathItem>> =>
+      axiosInstance.patch(`/learning-path/${childId}/reorder`, data),
+    onSuccess: (_data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["child-learning-path-summary", childId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["child-scheme-of-work", childId],
+      });
+    },
+    onError: (error: AxiosError) => {
+      handleErrorMessage(error);
+    },
+  });
+};
+
 export const usePatchSkipLearningPathItem = () => {
   const queryClient = useQueryClient();
   return useMutation({

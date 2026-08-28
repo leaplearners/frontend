@@ -237,6 +237,12 @@ export default function TutorHomeworkReviewPage() {
 
   const currentQ = questionsWithResults[currentQuestionIndex];
   const currentResult = currentQ?.result;
+  const currentHasTutorFeedback = Boolean(
+    (currentQ && feedbackTexts[currentQ.question.id]) ||
+      parseQuizFeedbackText(
+        currentResult?.tutorFeedback || currentResult?.feedback,
+      ),
+  );
 
   const mcTfUserAnswered =
     !currentQ ||
@@ -353,37 +359,45 @@ export default function TutorHomeworkReviewPage() {
 
           {/* Current Question with Results */}
           {currentQ && (
-            <Card>
+            <Card
+              className={cn(
+                currentHasTutorFeedback && "border-2 border-amber-500",
+              )}
+            >
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-lg">
                     Question {currentQuestionIndex + 1} of{" "}
                     {questionsWithResults.length}
                   </CardTitle>
-                  {currentResult && (
-                    <Badge
-                      variant={
-                        currentResult.isCorrect ? "default" : "destructive"
-                      }
-                      className="flex items-center gap-2"
-                    >
-                      {currentResult.isCorrect ? (
-                        <>
-                          <CheckCircle className="h-4 w-4" />
-                          Correct
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-4 w-4" />
-                          Incorrect
-                        </>
-                      )}
-                      {/* <span className="ml-2">
-                        {currentResult.pointsEarned}/
-                        {currentResult.pointsPossible} points
-                      </span> */}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {currentHasTutorFeedback && (
+                      <Badge className="border-transparent bg-amber-500 text-white shadow hover:bg-amber-500 gap-1.5">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Feedback added
+                      </Badge>
+                    )}
+                    {currentResult && (
+                      <Badge
+                        variant={
+                          currentResult.isCorrect ? "default" : "destructive"
+                        }
+                        className="flex items-center gap-2"
+                      >
+                        {currentResult.isCorrect ? (
+                          <>
+                            <CheckCircle className="h-4 w-4" />
+                            Correct
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-4 w-4" />
+                            Incorrect
+                          </>
+                        )}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -775,7 +789,7 @@ export default function TutorHomeworkReviewPage() {
             <CardTitle className="text-base">Question Review</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 max-h-[80vh] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[80vh] overflow-y-auto p-1.5">
               {questionsWithResults.map(
                 (q: QuestionWithResults, index: number) => {
                   const result = q.result;
@@ -787,44 +801,53 @@ export default function TutorHomeworkReviewPage() {
                     <button
                       key={q.id}
                       onClick={() => setCurrentQuestionIndex(index)}
+                      aria-current={isCurrent ? "true" : undefined}
+                      aria-label={`Question ${index + 1}${
+                        result?.isCorrect
+                          ? ", correct"
+                          : result
+                            ? ", incorrect"
+                            : ""
+                      }${hasFeedback ? ", has tutor feedback" : ""}`}
                       className={cn(
-                        "w-full px-3 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors",
-                        isCurrent
-                          ? "bg-primaryBlue text-white hover:bg-primaryBlue/90"
-                          : result?.isCorrect
-                            ? "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
-                            : result
-                              ? "bg-red-100 text-red-700 hover:bg-red-200 border border-red-300"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+                        "w-full min-w-0 rounded-md text-sm font-medium transition-colors overflow-hidden border-2 text-left",
+                        result?.isCorrect
+                          ? "bg-green-100 text-green-800 border-green-400 hover:bg-green-200"
+                          : result
+                            ? "bg-red-100 text-red-800 border-red-400 hover:bg-red-200"
+                            : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200",
+                        isCurrent && "ring-2 ring-offset-1 ring-slate-800",
+                        hasFeedback && "border-amber-500",
                       )}
                     >
-                      <div
-                        className={cn(
-                          "flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold",
-                          isCurrent
-                            ? "bg-white text-primaryBlue"
-                            : result?.isCorrect
+                      <div className="flex items-center gap-2 px-3 py-2">
+                        <div
+                          className={cn(
+                            "flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold",
+                            result?.isCorrect
                               ? "bg-green-600 text-white"
                               : result
                                 ? "bg-red-600 text-white"
-                                : "bg-gray-400 text-white"
-                        )}
-                      >
-                        {index + 1}
-                      </div>
-                      <span className="truncate flex-1 text-left">
-                        Question {index + 1}
-                      </span>
-                      <div className="flex items-center gap-1">
+                                : "bg-gray-400 text-white",
+                          )}
+                        >
+                          {index + 1}
+                        </div>
+                        <span className="truncate flex-1">
+                          Question {index + 1}
+                        </span>
                         {result?.isCorrect ? (
                           <CheckCircle className="h-4 w-4 flex-shrink-0" />
                         ) : result ? (
                           <XCircle className="h-4 w-4 flex-shrink-0" />
                         ) : null}
-                        {hasFeedback && (
-                          <MessageSquare className="h-3 w-3 flex-shrink-0 text-blue-600" />
-                        )}
                       </div>
+                      {hasFeedback && (
+                        <div className="flex items-center justify-center gap-1 bg-amber-500 text-white text-[11px] font-bold uppercase tracking-wide py-1 px-2">
+                          <MessageSquare className="h-3 w-3" />
+                          Feedback
+                        </div>
+                      )}
                     </button>
                   );
                 }

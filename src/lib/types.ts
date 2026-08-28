@@ -1321,7 +1321,7 @@ export interface SchemeOfWork {
   lessonTitle: string;
   orderIndex: number;
   inLearningPath: boolean;
-  status: string;
+  status: string | null;
 }
 
 export interface LearningPathSummary {
@@ -1330,14 +1330,14 @@ export interface LearningPathSummary {
     quizTitle: string;
     sectionTitle: string;
     lessonTitle: string;
-    status: string;
+    status: string | null;
   }[];
   upNext: {
     quizId: string;
     quizTitle: string;
     sectionTitle: string;
     lessonTitle: string;
-    status: string;
+    status: string | null;
   }[];
 }
 
