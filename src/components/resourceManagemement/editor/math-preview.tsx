@@ -76,6 +76,9 @@ function extractAndRenderMath(
     return placeholder;
   };
 
+  const isDisplayMath = (math: string) =>
+    /\\begin\{/.test(math) || /\n/.test(math.trim());
+
   // Block math first ($$...$$ and \[...\])
   text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, math: string) =>
     stash(math, true),
@@ -84,12 +87,13 @@ function extractAndRenderMath(
     stash(math, true),
   );
 
-  // Inline math ($...$ and \(...\)) — avoid matching lone $ that start $$
-  text = text.replace(/(?<!\$)\$(?!\$)([^$\n]+?)\$(?!\$)/g, (_, math: string) =>
-    stash(math, false),
+  // $...$ may span lines (e.g. \begin{array} ... \\ ... \end{array}).
+  // [^$\n] previously dropped any delimited math that contained a newline.
+  text = text.replace(/(?<!\$)\$(?!\$)([\s\S]*?)\$(?!\$)/g, (_, math: string) =>
+    stash(math, isDisplayMath(math)),
   );
   text = text.replace(/\\\(([\s\S]*?)\\\)/g, (_, math: string) =>
-    stash(math, false),
+    stash(math, isDisplayMath(math)),
   );
 
   return { text, tokens };
