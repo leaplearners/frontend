@@ -186,16 +186,21 @@ export const useGetTutorById = (id: string) => {
   });
 };
 
-export const useGetTutorStudent = (id: string) => {
+export const useGetTutorStudent = (
+  id?: string,
+  status?: "pending" | "active" | "not-active",
+) => {
   return useQuery({
-    queryKey: ["tutor-student", id],
+    queryKey: ["tutor-student", id ?? null, status ?? null],
     queryFn: async (): Promise<ChildProfile[]> => {
+      const params = new URLSearchParams();
+      if (id) params.append("tutorId", id);
+      if (status) params.append("status", status);
       const response = await axiosInstance.get(
-        `/tutors/assigned-students?tutorId=${id}`
+        `/tutors/assigned-students?${params.toString()}`
       );
       return response.data.data;
     },
-    enabled: !!id,
   });
 };
 

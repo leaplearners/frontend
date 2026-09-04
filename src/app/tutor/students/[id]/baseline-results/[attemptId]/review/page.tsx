@@ -44,6 +44,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { MathPreview } from "@/components/resourceManagemement/editor/math-preview";
 import { QuestionImage } from "@/components/ui/question-image";
+import { TutorOverallQuizFeedback } from "@/components/platform/quiz/overall-quiz-feedback";
 
 interface QuestionWithResults {
   id: string;
@@ -247,7 +248,13 @@ export default function BaselineReviewPage() {
         {/* Main Review Area */}
         <div className="flex-1">
           {/* Summary Header */}
-          <Card className="mb-6">
+          <Card
+            className={cn(
+              "mb-6",
+              parseQuizFeedbackText(review.overallFeedback) &&
+                "border-2 border-amber-500",
+            )}
+          >
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -268,6 +275,10 @@ export default function BaselineReviewPage() {
                   </p>
                 </div>
               </div>
+              <TutorOverallQuizFeedback
+                attemptId={review.attemptId || id}
+                existingFeedback={review.overallFeedback}
+              />
             </CardContent>
           </Card>
 
