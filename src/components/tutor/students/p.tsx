@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
 import { ChevronDown, SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
-import { useGetCurrentUser, useGetTutorStudent } from "@/lib/api/queries";
+import { useGetTutorStudent } from "@/lib/api/queries";
 import { ChildProfile } from "@/lib/types";
 import { toast } from "react-toastify";
 import profileIcon from "@/assets/profileIcon.svg";
@@ -21,34 +21,47 @@ function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
+function offerTypeLabel(offerType: ChildProfile["offerType"]) {
+  if (offerType === "tuition") return "Guided Learning";
+  if (offerType === "platform") return "Platform";
+  return "No Plan";
+}
+
+function studentStatus(profile: ChildProfile) {
+  return String(profile.status ?? "")
+    .toLowerCase()
+    .replace(/_/g, "-");
+}
+
+function isInactiveStudent(profile: ChildProfile) {
+  const status = studentStatus(profile);
+  if (status === "not-active" || status === "inactive") return true;
+  if (status === "active" || status === "pending") return false;
+  return profile.isActive === false;
+}
+
 export default function TutorStudentPage() {
   const [search, setSearch] = useState("");
   const [year, setYear] = useState("All");
   const [subscription, setSubscription] = useState("Guided Learning");
   const { push } = useRouter();
-  const { data: tutorData } = useGetCurrentUser();
-  const [tutorId, setTutorId] = useState("");
-
-  useEffect(() => {
-    // @ts-ignore
-    setTutorId(tutorData?.data?.tutorProfile?.id);
-  }, [tutorData]);
-
-  const { data: studentsData, isLoading, error } = useGetTutorStudent(tutorId);
+  const { data: studentsData, isLoading, error } = useGetTutorStudent();
 
   // Extract students from API response - the API returns ChildProfile[] directly
   const students: ChildProfile[] = studentsData || [];
 
-  const offerTypeLabel = (offerType: ChildProfile["offerType"]) => {
-    if (offerType === "tuition") return "Guided Learning";
-    if (offerType === "platform") return "Platform";
-    return "No Plan";
-  };
+  // Active + pending only; inactive kids are dropped client-side
+  const listedStudents = useMemo(
+    () => students.filter((profile) => !isInactiveStudent(profile)),
+    [students],
+  );
 
   // Generate filter options from actual data
   const years = [
     "All",
-    ...Array.from(new Set(students.map((s: ChildProfile) => `Year ${s.year}`))),
+    ...Array.from(
+      new Set(listedStudents.map((s: ChildProfile) => `Year ${s.year}`)),
+    ),
   ];
 
   const subscriptions = [
@@ -56,7 +69,7 @@ export default function TutorStudentPage() {
     "Guided Learning",
     ...Array.from(
       new Set(
-        students
+        listedStudents
           .map((s: ChildProfile) => offerTypeLabel(s.offerType))
           // Platform is not a filter option; Guided Learning is always included above
           .filter(
@@ -67,9 +80,9 @@ export default function TutorStudentPage() {
   ];
 
   const filteredProfiles = useMemo(() => {
-    if (!students.length) return [];
+    if (!listedStudents.length) return [];
 
-    return students.filter((profile: ChildProfile) => {
+    return listedStudents.filter((profile: ChildProfile) => {
       const matchesSearch = profile.name
         .toLowerCase()
         .includes(search.toLowerCase());
@@ -79,7 +92,7 @@ export default function TutorStudentPage() {
         subscription === "All" || profileSubscription === subscription;
       return matchesSearch && matchesYear && matchesSubscription;
     });
-  }, [students, search, year, subscription]);
+  }, [listedStudents, search, year, subscription]);
 
   if (isLoading) {
     return (
@@ -170,27 +183,18 @@ export default function TutorStudentPage() {
                 src={profile.avatar ? profile.avatar : profileIcon.src}
                 alt={profile.name}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  // fallback to profileIcon if not already set, otherwise fallback to a placeholder
-                  const img = e.target as HTMLImageElement;
-                  if (img.src !== profileIcon && img.src !== window.location.origin + profileIcon) {
-                    img.src = profileIcon;
-                  } else {
-                    img.src = profileIcon;
-                  }
-                }}
-
               />
             </div>
 
             {/* Status Badge */}
             <span
-              className={`absolute right-2 top-2 text-xs font-semibold px-2 py-0.5 rounded-full ${profile.isActive && profile.offerType !== null
-                ? "bg-green-100 text-green-600"
-                : "bg-red-100 text-red-600"
-                }`}
+              className={`absolute right-2 top-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                studentStatus(profile) === "pending"
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-green-100 text-green-600"
+              }`}
             >
-              {profile.isActive && profile.offerType !== null ? "Active" : "Inactive"}
+              {studentStatus(profile) === "pending" ? "Pending" : "Active"}
             </span>
             {/* Name */}
             <div className="mt-2 text-center">

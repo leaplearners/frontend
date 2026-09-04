@@ -32,6 +32,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { QuestionImage } from "@/components/ui/question-image";
 import { WatchLessonVideoButton } from "@/components/platform/library/watchLessonVideoButton";
+import { StudentOverallQuizFeedback } from "@/components/platform/quiz/overall-quiz-feedback";
 import { useProfile } from "@/context/profileContext";
 
 interface QuestionWithResults {
@@ -276,7 +277,13 @@ export default function QuizAttemptReviewPage() {
         {/* Main Review Area */}
         <div className="flex-1">
           {/* Results Summary Header */}
-          <Card className="mb-6">
+          <Card
+            className={cn(
+              "mb-6",
+              parseQuizFeedbackText(review.overallFeedback) &&
+                "border-2 border-amber-500",
+            )}
+          >
             <CardHeader className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle>Quiz Review</CardTitle>
@@ -351,6 +358,7 @@ export default function QuizAttemptReviewPage() {
                   </div>
                 </div>
               </div>
+              <StudentOverallQuizFeedback feedback={review.overallFeedback} />
             </CardContent>
           </Card>
 

@@ -1356,6 +1356,23 @@ export const usePatchMarkQuizQuestionAsCorrect = (questionAttemptId: string) => 
   });
 };
 
+export const usePatchQuizAttemptOverallFeedback = (id: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["patch-quiz-attempt-overall-feedback", id],
+    mutationFn: (data: { feedback: string }): Promise<ApiResponse<Quiz>> =>
+      axiosInstance.patch(`/quiz-attempts/${id}/feedback`, data),
+    onSuccess: (data: ApiResponse<Quiz>) => {
+      queryClient.invalidateQueries({ queryKey: ["quiz-attempt"] });
+      queryClient.invalidateQueries({ queryKey: ["homework"] });
+      return data;
+    },
+    onError: (error: AxiosError) => {
+      handleErrorMessage(error);
+    },
+  });
+};
+
 // Curriculum Mutations
 export const usePostCurriculum = () => {
   const queryClient = useQueryClient();

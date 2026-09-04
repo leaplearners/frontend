@@ -14,7 +14,6 @@ import { SearchIcon } from "lucide-react";
 import {
   useGetTutorStudent,
   useGetQuizzes,
-  useGetCurrentUser,
 } from "@/lib/api/queries";
 import { usePostHomework } from "@/lib/api/mutations";
 import { toast } from "react-toastify";
@@ -74,16 +73,9 @@ export default function AssignHomeworkForm({
     ];
   });
 
-  // Get tutor profile to fetch tutor ID
-  const { data: tutorProfileResponse, isLoading: isLoadingProfile } =
-    useGetCurrentUser();
-  const tutorProfile = tutorProfileResponse?.data;
-  //@ts-ignore
-  const tutorId = tutorProfile?.tutorProfile?.id || "";
-
-  // Fetch students assigned to tutor
+  // Fetch active students assigned to the current tutor
   const { data: studentsResponse, isLoading: isLoadingStudents } =
-    useGetTutorStudent(tutorId);
+    useGetTutorStudent(undefined, "active");
   const students = studentsResponse || [];
 
   // Filter students based on search
@@ -269,7 +261,7 @@ export default function AssignHomeworkForm({
                   <button
                     type="button"
                     className="w-full rounded-2xl border border-gray-200 bg-gray-100 px-6 py-5 text-gray-500 text-left flex items-center justify-between focus:outline-none text-base"
-                    disabled={isLoadingStudents || isLoadingProfile}
+                    disabled={isLoadingStudents}
                   >
                     {student ? (
                       <span>

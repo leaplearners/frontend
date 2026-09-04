@@ -1100,6 +1100,8 @@ export interface HomeworkReview {
   /** When set (e.g. tuition-linked homework), links to curriculum lesson video. */
   curriculumLessonId?: string | null;
   isBuddyReviewed: boolean;
+  /** Tutor-authored general feedback for the whole attempt. */
+  overallFeedback?: string | null;
 }
 
 export interface Section {
