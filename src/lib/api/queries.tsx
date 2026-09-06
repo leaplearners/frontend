@@ -621,7 +621,7 @@ export const useGetResumeQuizAttempt = (attemptId: string) => {
   return useQuery({
     queryKey: ["resume-quiz-attempt", attemptId],
     queryFn: async (): Promise<APIGetResponse<QuizResumeAttempt>> => {
-      const response = await axiosInstance.get(`/quizzes/attempt/${attemptId}/resume`);
+      const response = await axiosInstance.get(`/quiz-attempts/${attemptId}/resume`);
       return response.data;
     },
     enabled: !!attemptId,
